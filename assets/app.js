@@ -302,17 +302,18 @@ function resultSections(P, targets) {
 }
 
 let lastP = null;
-function surplusOf(P, k) {   // surplus by-products attributable to the machines making k
+function byprodOf(P, k, pool) {   // part of P[pool] (surplus or recovered) attributable to the machines making k
   const m = P.mach[k];
   if (!m) return [];
   const R = D.recipes[m.r], out = [];
   for (const [b, a] of R.o) {
-    if (b === k || !P.surplus[b]) continue;
+    if (b === k || !P[pool][b]) continue;
     const amt = a * 60 / R.t * m.n;
-    out.push([b, P.surplus[b] * amt / P.supply[b]]);
+    out.push([b, P[pool][b] * amt / P.supply[b]]);
   }
   return out.filter(([, v]) => v > EPS);
 }
+const surplusOf = (P, k) => byprodOf(P, k, "surplus");
 function stepsHtml(P, targets) {
   lastP = P;
   const tset = new Set(targets.map((t) => t.c));
@@ -332,11 +333,10 @@ function stepsHtml(P, targets) {
     }
     const { r, n } = P.mach[k], R = D.recipes[r];
     const q = n * perMin(r, k, "o");
-    const rec = P.recovered[k];
     const sur = surplusOf(P, k);
     const isOpen = openRows.has(k);
     h += `<tr id="row-${k}" class="${isOpen ? "xopen" : ""}"><td><div class="it"><button class="xp" data-xp="${k}" aria-expanded="${isOpen}" aria-label="${isOpen ? "Replier" : "Déplier"} le détail de ${esc(name(k))}"><span aria-hidden="true">▸</span></button>${icon(k, "sm")}<button class="link" data-pick="${k}">${esc(name(k))}</button>${tset.has(k) ? ' <span class="tag tgt" data-tip="Pièce demandée dans votre usine">Objectif</span>' : ""}${R.alt ? ' <span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>' : ""}</div></td>
-      <td class="r num">${fmt(q)}${unit(k)}/min${rec ? `<small class="sub" data-tip="En plus de cette production : quantité fournie par des sous-produits (détail en dépliant la ligne)">+ ${fmt(rec)} récupérés</small>` : ""}${sur.map(([b, v]) => `<small class="sur" data-tipitem="${b}">+ ${fmt(v)}${unit(b)} ${esc(name(b))} en surplus</small>`).join("")}</td><td>${machinesTxt(n, R.m)}</td><td class="r num">${fmt(n * R.mw)}</td>
+      <td class="r num">${fmt(q)}${unit(k)}/min${sur.map(([b, v]) => `<small class="sur" data-tipitem="${b}">+ ${fmt(v)}${unit(b)} ${esc(name(b))} en surplus</small>`).join("")}</td><td>${machinesTxt(n, R.m)}</td><td class="r num">${fmt(n * R.mw)}</td>
       <td>${recipeSelect(k, "rs-" + k)}</td></tr>`;
     if (isOpen) h += `<tr class="xrow"><td colspan="5">${rowDetail(P, k, q)}</td></tr>`;
   }
@@ -345,13 +345,18 @@ function stepsHtml(P, targets) {
 function rowDetail(P, k, q) {
   const fl = P.flows[k] || {};
   const dest = Object.keys(fl).sort((a, b) => fl[b] - fl[a]);
-  const sur = surplusOf(P, k);
+  const sur = surplusOf(P, k), reu = byprodOf(P, k, "recovered");
   let h = `<div class="xbox"><div class="xcol"><div class="eyebrow">Fabrication de ${fmt(q)}${unit(k)}/min</div><div class="tree">${treeKids(k, q, 0, [k], "x")}</div></div>`;
   h += `<div class="xcol"><div class="eyebrow">Destination</div><div class="chips" style="margin-top:6px">` +
     dest.map((d) => d === "__goal"
       ? `<span class="chip static"><span class="tag tgt">Objectif</span> <span class="num">${fmt(fl[d])}${unit(k)}/min</span></span>`
       : `<button class="chip" data-goto="${d}" data-tipitem="${d}">${icon(d, "sm")}${esc(name(d))} <span class="num">${fmt(fl[d])}${unit(k)}/min</span></button>`).join("") +
     `</div>${P.recovered[k] ? `<p class="note">Consommé au total : ${fmt(P.demand[k])}${unit(k)}/min, dont ${fmt(P.recovered[k])}${unit(k)}/min récupérés en sous-produit de ${recFrom(P, k, P.recovered[k])}</p>` : ""}` +
+    (reu.length ? `<div class="eyebrow" style="margin-top:14px">Surplus réutilisé</div><div class="chips" style="margin-top:6px">` +
+      reu.map(([b, v]) => {
+        const body = `${icon(b, "sm")}${esc(name(b))} <span class="num">+${fmt(v)}${unit(b)}/min</span>`;
+        return P.mach[b] ? `<button class="chip" data-goto="${b}" data-tipitem="${b}">${body}</button>` : `<span class="chip static" data-tipitem="${b}">${body}</span>`;
+      }).join("") + `</div>` : "") +
     (sur.length ? `<div class="eyebrow" style="margin-top:14px">Surplus à évacuer</div><div class="chips" style="margin-top:6px">` +
       sur.map(([b, v]) => `<span class="chip static" data-tipitem="${b}">${icon(b, "sm")}${esc(name(b))} <span class="num">+${fmt(v)}${unit(b)}/min</span></span>`).join("") + `</div>` : "") +
     `</div></div>`;
