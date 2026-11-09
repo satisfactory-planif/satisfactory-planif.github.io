@@ -380,14 +380,14 @@ function netSplit(k, q) {
 function treeNode(k, q, depth, path, sc) {   // sc: tree scope, "t" (Arbres tab) or "x" (step detail)
   const r = recipeOf(k);
   const { made, rec } = netSplit(k, q);
-  const recTag = rec > EPS ? `<span class="recl"><span class="tag ok" data-tip="Partie couverte par un sous-produit d'une autre étape de la chaîne">dont ${fmt(rec)}${unit(k)} récupérés</span><span class="from">sous-produit de</span>${recFrom(lastP, k, rec)}</span>` : "";
-  const lab = `${icon(k, "sm")}<span class="num q" data-tip="${rec > EPS ? "Quantité consommée au total, part récupérée comprise" : "Quantité consommée"}">${fmt(q)}${unit(k)}/min</span><button class="link" data-pick="${k}">${esc(name(k))}</button>${recTag}`;
+  const recTag = rec > EPS ? `<span class="recl"><span class="tag ok" data-tip="Partie couverte par un sous-produit d'une autre étape de la chaîne">dont ${fmt(rec)}${unit(k)} récupérés</span><span class="fromg"><span class="from">sous-produit de</span>${recFrom(lastP, k, rec)}</span></span>` : "";
+  const lab = `<span class="nh">${icon(k, "sm")}<span class="num q" data-tip="${rec > EPS ? "Quantité consommée au total, part récupérée comprise" : "Quantité consommée"}">${fmt(q)}${unit(k)}/min</span><button class="link" data-pick="${k}">${esc(name(k))}</button></span>${recTag}`;
   if (!r) return `<div class="leaf">${lab}<span class="tag raw" data-tip="${D.items[k].raw ? "Ressource extraite, à amener à l'usine" : "Pièce fournie de l'extérieur, non calculée"}">${D.items[k].raw ? "brut" : "entrée"}</span>${rec > EPS && made > EPS ? `<span class="rest">reste <span class="num">${fmt(made)}${unit(k)}/min</span> à amener</span>` : rec > EPS ? `<span class="rest">rien à amener</span>` : ""}</div>`;
   if (path.includes(k)) return `<div class="leaf">${lab}<span class="tag loop" data-tip="Cette pièce se consomme elle-même plus haut dans la chaîne : l'arbre s'arrête ici.">boucle</span></div>`;
   if (made <= EPS) return `<div class="leaf">${lab}<span class="rest">entièrement couvert, rien à fabriquer</span></div>`;
   const R = D.recipes[r], n = made / perMin(r, k, "o"), p = path.concat(k).join(",");
   const st = treeOpen.get(sc + "|" + p), open = st === undefined ? depth === 0 : st;   // by default only the first level below a tree is shown
-  return `<details data-k="${k}" data-q="${made}" data-d="${depth}" data-s="${sc}" data-p="${p}"${open ? " open" : ""}><summary><span class="row">${lab}<span class="num q">·</span>${mIcon(R.m)}<span class="num q">${fmt(n)} × ${esc(mName(R.m))}</span>${R.alt ? '<span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>' : ""}${rec > EPS ? `<span class="rest">pour les <span class="num">${fmt(made)}${unit(k)}/min</span> restants</span>` : ""}</span></summary>${open ? treeKids(k, made, depth, path.concat(k), sc) : ""}</details>`;
+  return `<details data-k="${k}" data-q="${made}" data-d="${depth}" data-s="${sc}" data-p="${p}"${open ? " open" : ""}><summary><span class="row">${lab}<span class="mk">${mIcon(R.m)}<span class="num q">${fmt(n)} × ${esc(mName(R.m))}</span>${R.alt ? '<span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>' : ""}</span>${rec > EPS ? `<span class="rest">pour les <span class="num">${fmt(made)}${unit(k)}/min</span> restants</span>` : ""}</span></summary>${open ? treeKids(k, made, depth, path.concat(k), sc) : ""}</details>`;
 }
 function treeKids(k, q, depth, path, sc) {
   const r = recipeOf(k), R = D.recipes[r], n = q / perMin(r, k, "o");
