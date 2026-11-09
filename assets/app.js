@@ -1066,36 +1066,80 @@ function renderTransport() {
     </section></div>`;
   return h + `<div id="tres">${transportResults(lines)}</div>`;
 }
+const plural = (n, one, many) => `${fmt(n)} ${n > 1 ? many || one + "s" : one}`;
+const tierRate = (b) => (b.fl ? (b.tier === "Mk.1" ? PIPE / 2 : PIPE) : BELT[+b.tier.slice(3) - 1]);
+/* "Comparaison": one row per resource, one button per transport; the calculation is in the tooltip. */
+function compareRow(c, rate) {
+  const v = viaOf(c), b = beltCalc(c, rate), t = trainCalc(c, rate), d = droneCalc(c, rate), u = unit(c);
+  const cell = (k, label, body, tipTxt) => `<td data-l="${label}"><button class="vcell${v === k ? " on" : ""}" data-via="${k}" data-viac="${c}" aria-pressed="${v === k}"${tipTxt ? ` data-tip="${esc(tipTxt)}"` : ""}>${body}</button></td>`;
+  const trainTip = [`1 wagon : ${fmt(t.cap)}${u} ÷ ${mmss(trainSec())} = ${fmt(t.per)}${u}/min`,
+    `1 quai (2 ${b.fl ? "pipelines Mk.2" : "tapis Mk." + T.belt}) : ${fmt(t.feed)}${u}/min max`,
+    `Rempli à ${fmt(t.fill * 100)} %`,
+    t.maxSec >= 1 ? `${T.stops ? "Trajet" : "Aller-retour"} jusqu'à ${mmss(Math.floor(Math.min(t.maxSec, 7200)))} sans wagon de plus` : "Aucune marge : un trajet plus long demande un wagon de plus"].join("\n");
+  return `<tr><td class="res"><div class="it">${icon(c, "sm")}<div><button class="link" data-pick="${c}">${esc(name(c))}</button><small class="num">${fmt(rate)}${u}/min</small></div></div></td>` +
+    cell("belt", b.fl ? "Tuyaux" : "Tapis", `<b>${beltTxt(b)}</b><small>${fmt(tierRate(b))}${u}/min chacun</small>`) +
+    cell("train", "Train", `<b>${t.trains > 1 ? `${t.trains} trains × ${plural(t.k, "wagon")}` : plural(t.k, "wagon")}</b>${t.mixed ? "<small>train mixte</small>" : ""}<small>rempli à ${fmt(t.fill * 100)} %<span class="info" aria-hidden="true">ⓘ</span></small>${t.byFeed ? `<small class="warn">limité par les quais</small>` : ""}`, trainTip) +
+    (d ? cell("drone", "Drones", `<b>${plural(d.drones, "drone")}</b><small>${fmt(d.batt)} batt./min<span class="info" aria-hidden="true">ⓘ</span></small>`,
+        `1 drone : ${fmt(d.cap)} par voyage ÷ ${mmss(T.droneRT)} = ${fmt(d.per)}/min\nRempli à ${fmt(d.fill * 100)} %\n${fmt(d.batt)} batteries/min`)
+       : `<td data-l="Drones"><span class="vnone" data-tip="Les drones ne transportent pas de fluide sans le conditionner.">Impossible : fluide</span></td>`) + `</tr>`;
+}
+/* "À construire": what to build for the chosen transport of each resource, with numbered notes. */
 function transportResults(lines) {
   lines = lines.filter((l) => l.rate > 0);
   if (!lines.length) return "";
   const L = logistics(lines);
-  let h = `<div class="card"><section><h3 class="uh">Comparaison</h3><p class="note" style="margin:0 0 10px">Cliquez sur une case pour choisir le transport utilisé ; le choix est repris dans Mon usine.</p><div class="tbl"><table class="tcmp"><thead><tr><th>Ressource</th><th class="r">Débit</th><th>Tapis / tuyaux</th><th>Train</th><th>Drones</th></tr></thead><tbody>`;
+  const notes = {
+    mixed: L.mixed && "En train mixte, toutes les ressources partagent le même aller-retour et doivent être disponibles à la même gare de départ.",
+    multi: L.groups.some((g) => g.trains > 1 || g.locos > 1) && (T.split
+      ? `Au-delà de ${T.maxW} wagons, la charge est répartie sur plusieurs trains identiques qui partagent les mêmes gares et les mêmes quais : ils s'y succèdent.`
+      : `Au-delà de ${T.maxW} wagons, une locomotive est ajoutée par tranche de ${T.maxW} wagons.`),
+    quai: L.groups.length > 0 && `Un conteneur industriel par quai, de chaque côté, pour absorber les ${DOCK} s de transfert.`,
+    port: L.drones > 0 && "Au moins 1 héliport d'arrivée en plus des héliports de départ (1 drone chacun).",
+  };
+  const keys = Object.keys(notes).filter((k) => notes[k]), fn = (k) => (keys.includes(k) ? `<sup class="fn">${keys.indexOf(k) + 1}</sup>` : "");
+  const head = (c, mode) => `<div class="bhead">${icon(c, "sm")}<button class="link" data-pick="${c}">${esc(name(c))}</button><span class="bmode">${mode}</span></div>`;
+  const rateOf = (c) => lines.find((l) => l.c === c).rate;
+  const blocks = [], seen = new Set();
   for (const { c, rate } of lines) {
-    const v = viaOf(c), b = beltCalc(c, rate), t = trainCalc(c, rate), d = droneCalc(c, rate);
-    const cell = (k, body, ok = true) => `<td><button class="vcell${v === k ? " on" : ""}" data-via="${k}" data-viac="${c}"${ok ? "" : " disabled"} aria-pressed="${v === k}">${body}</button></td>`;
-    h += `<tr><td><div class="it">${icon(c, "sm")}<button class="link" data-pick="${c}">${esc(name(c))}</button></div></td><td class="r num">${fmt(rate)}${unit(c)}/min</td>` +
-      cell("belt", `<b>${beltTxt(b)}</b><small>${b.fl ? "Pipeline" : "Convoyeur"} ${b.tier} : ${fmt(b.fl ? (b.tier === "Mk.1" ? 300 : 600) : BELT[+b.tier.slice(3) - 1])}${unit(c)}/min chacun</small>`) +
-      cell("train", `<b>${t.trains > 1 ? `${t.trains} trains × ${t.k} wagon${t.k > 1 ? "s" : ""}` : `${t.k} wagon${t.k > 1 ? "s" : ""}`}${t.mixed ? " (train mixte)" : ""} · ${t.k} quai${t.k > 1 ? "s" : ""} de chaque côté</b><small>1 wagon : ${fmt(t.cap)}${unit(c)} ÷ ${mmss(trainSec())} = ${fmt(t.per)}${unit(c)}/min</small>
-        <small>1 quai, alimenté par 2 ${b.fl ? "pipelines Mk.2" : "tapis Mk." + T.belt} : ${fmt(t.feed)}${unit(c)}/min max</small>
-        <small>Remplissage ${fmt(t.fill * 100)} % · ${t.maxSec >= 1 ? `${T.stops ? "trajet" : "aller-retour"} jusqu'à ${mmss(Math.floor(Math.min(t.maxSec, 7200)))} sans wagon de plus` : "aucune marge"}</small>${t.byFeed ? `<small class="warn">Limité par les ${b.fl ? "tuyaux" : "tapis Mk." + T.belt} des quais (${fmt(t.feed)}${unit(c)}/min par quai)</small>` : ""}`) +
-      (d ? cell("drone", `<b>${d.drones} drone${d.drones > 1 ? "s" : ""}</b><small>${fmt(d.cap)} par voyage · ${fmt(d.per)}/min par drone · ${fmt(d.batt)} batteries/min</small>`)
-         : `<td><span class="empty">Les drones ne transportent pas de fluide sans le conditionner.</span></td>`) + `</tr>`;
+    const v = viaOf(c), u = unit(c);
+    if (v === "train") {
+      const g = L.groups.find((x) => x.cs.includes(c));
+      if (seen.has(g)) continue;
+      seen.add(g);
+      const mixed = g.res.length > 1, ul = [];
+      ul.push(`${g.trains > 1 ? `<b>${g.trains} trains identiques</b>${fn("multi")}, chacun : ` : ""}${plural(g.locos, "locomotive")}${g.locos > 1 ? fn("multi") : ""} + ${plural(g.len, "wagon")}${mixed ? ` (${g.res.map((r) => `${r.k} ${esc(name(r.c))}`).join(", ")})` : ""}`);
+      ul.push(`2 gares (départ et arrivée), ${plural(g.len, "quai")}${fn("quai")} à chacune`);
+      for (const r of g.res) {
+        const pq = r.rate / r.k, ru = unit(r.c), nb = Math.max(1, Math.ceil(pq / (r.feed / 2) - EPS));   // belts of the chosen tier, 2 at most
+        const bt = r.fl ? `${nb} tuyau${nb > 1 ? "x" : ""} Mk.2` : `${nb} tapis Mk.${T.belt}`;
+        ul.push(mixed ? `${esc(name(r.c))} : ${plural(r.k, "quai")} à <span class="num">${fmt(pq)}${ru}/min</span>, ${bt} chacun`
+          : `Chaque quai charge puis décharge <span class="num">${fmt(pq)}${ru}/min</span> : ${bt} par quai`);
+      }
+      const calc = g.res.map((r) => `${mixed ? esc(name(r.c)) + " : " : ""}1 wagon = ${fmt(r.per)}${unit(r.c)}/min (${fmt(r.cap)}${unit(r.c)} ÷ ${mmss(trainSec())}), rempli à ${fmt(r.fill * 100)} %${r.maxSec >= 1 ? `, ${T.stops ? "trajet" : "aller-retour"} jusqu'à ${mmss(Math.floor(Math.min(r.maxSec, 7200)))} sans wagon de plus` : ", aucune marge"}`);
+      const warn = g.tooLong ? `<p class="bwarn">Plus de ${T.maxW} wagons par train : ${g.res.some((r) => r.byFeed) ? "les tapis des quais imposent ces quais ; un tapis plus rapide raccourcit le train" : "un wagon par ressource au minimum dans chaque train ; augmentez le maximum ou passez en « Un train par ressource »"}.</p>`
+        : g.res.some((r) => r.byFeed) ? `<p class="bwarn">Wagons ajoutés pour l'alimentation : avec moins de quais, 2 ${g.res.some((r) => r.byFeed && r.fl) ? "tuyaux Mk.2" : "tapis Mk." + T.belt} par quai ne suffiraient pas.</p>` : "";
+      blocks.push(`<div class="bgrp">${mixed ? `<div class="bhead"><b>Train mixte${fn("mixed")}</b><span class="bmode">Train</span></div><div class="bres">${g.res.map((r) => `<span>${icon(r.c, "sm")}<button class="link" data-pick="${r.c}">${esc(name(r.c))}</button> <span class="num">${fmt(r.rate)}${unit(r.c)}/min</span></span>`).join("")}</div>`
+        : head(c, "Train") + `<div class="brate num">${fmt(rateOf(c))}${u}/min</div>`}<ul>${ul.map((x) => `<li>${x}</li>`).join("")}</ul>${warn}<p class="bcalc">${calc.join("<br>")}</p></div>`);
+    } else if (v === "drone") {
+      const d = droneCalc(c, rate);
+      blocks.push(`<div class="bgrp">${head(c, "Drones")}<div class="brate num">${fmt(rate)}/min</div><ul><li>${plural(d.drones, "drone")}</li><li>${plural(d.drones, "héliport")} de départ + 1 d'arrivée${fn("port")}</li><li>${fmt(d.batt)} batteries/min</li></ul>
+        <p class="bcalc">1 drone = ${fmt(d.per)}/min (${fmt(d.cap)} par voyage ÷ ${mmss(T.droneRT)}), rempli à ${fmt(d.fill * 100)} %</p></div>`);
+    } else {
+      const b = beltCalc(c, rate);
+      blocks.push(`<div class="bgrp">${head(c, b.fl ? "Tuyaux" : "Tapis")}<div class="brate num">${fmt(rate)}${u}/min</div><ul><li>${beltTxt(b)}</li></ul>
+        <p class="bcalc">${b.fl ? "Pipeline" : "Convoyeur"} ${b.tier} : ${fmt(tierRate(b))}${u}/min chacun</p></div>`);
+    }
   }
-  h += `</tbody></table></div></section>`;
-  h += `<section><h3 class="uh">Avec vos choix</h3><div class="stats">
-      <div class="stat"><b>${L.nTrains}</b><span>train${L.nTrains > 1 ? "s" : ""}${L.mixed ? " (mixte)" : ""} · ${L.locos} locomotive${L.locos > 1 ? "s" : ""}</span></div>
-      <div class="stat"><b>${L.trainW}</b><span>wagon${L.trainW > 1 ? "s" : ""} · ${L.platforms} quai${L.platforms > 1 ? "s" : ""} · ${L.stations} gare${L.stations > 1 ? "s" : ""}</span></div>
-      <div class="stat"><b>${L.drones}</b><span>drone${L.drones > 1 ? "s" : ""} · ${L.ports} héliport${L.ports > 1 ? "s" : ""} · ${fmt(L.batt)} batt./min</span></div>
-      <div class="stat"><b>${fmt(L.mw)}</b><span>MW (gares, quais, héliports)${L.locos ? ` + jusqu'à ${fmt(L.locos * 110)} MW de locomotives` : ""}</span></div>
-    </div>`;
-  if (L.groups.length) h += `<div class="tdetail">` + L.groups.map((g) => `<div class="raw"><div><b>${L.mixed ? "Train mixte" : esc(name(g.cs[0]))}</b>
-      <small>${g.trains > 1 ? `${g.trains} trains identiques, chacun : ` : ""}${g.locos} locomotive${g.locos > 1 ? "s" : ""} + ${g.len} wagon${g.len > 1 ? "s" : ""}${L.mixed ? ` (${g.res.map((r) => `${r.k} ${esc(name(r.c))}`).join(", ")})` : ""}</small>
-      <small>1 gare et ${g.len} quai${g.len > 1 ? "s" : ""} de chaque côté${g.trains > 1 ? ", partagés : les trains s'y succèdent" : ""}</small>
-      ${g.tooLong ? `<small class="warn">Plus de ${T.maxW} wagons par train : ${g.res.some((r) => r.byFeed) ? "les tapis des quais imposent ces quais ; un tapis plus rapide raccourcit le train" : `un wagon par ressource au minimum dans chaque train ; augmentez le maximum ou passez en « Un train par ressource »`}.</small>` : ""}</div></div>`).join("") + `</div>`;
-  if (Object.keys(L.belts).length) h += `<p class="note">Tapis et tuyaux : ${Object.keys(L.belts).map((k) => `${L.belts[k]} ${k}`).join(", ")}.</p>`;
-  h += `<p class="note">Repères : au-delà de ${T.maxW} wagons, ${T.split ? "la page répartit la charge sur plusieurs trains identiques qui partagent les mêmes gares" : `la page ajoute une locomotive par tranche de ${T.maxW} wagons`} ; un conteneur industriel par quai, de chaque côté, pour absorber les 27 s de transfert ; au moins 1 héliport d'arrivée en plus des héliports de départ (1 drone chacun).${L.mixed ? " En train mixte, toutes les ressources partagent le même aller-retour et doivent être disponibles à la même gare de départ." : ""}</p></section></div>`;
-  return h;
+  const tot = [];
+  if (L.nTrains) tot.push(plural(L.nTrains, "train"), plural(L.locos, "locomotive"), plural(L.trainW, "wagon"), plural(L.stations, "gare"), `${plural(L.platforms, "quai")}${fn("quai")}`);
+  for (const k in L.belts) tot.push(`${L.belts[k]} ${k}`);
+  if (L.drones) tot.push(plural(L.drones, "drone"), `${plural(L.ports, "héliport")}${fn("port")}`, `${fmt(L.batt)} batteries/min`);
+  if (L.mw) tot.push(`${fmt(L.mw)} MW (gares, quais, héliports)${L.locos ? ` + jusqu'à ${fmt(L.locos * 110)} MW de locomotives` : ""}`);
+  return `<div class="card"><section><h3 class="uh">Comparaison</h3><p class="note" style="margin:0 0 10px">Choisissez le transport de chaque ressource ; le choix est repris dans Mon usine. Survolez une case pour le détail du calcul.</p>
+    <div class="tbl"><table class="tcmp"><thead><tr><th>Ressource</th><th>Tapis / tuyaux</th><th>Train</th><th>Drones</th></tr></thead><tbody>${lines.map((l) => compareRow(l.c, l.rate)).join("")}</tbody></table></div></section>
+    <section><h3 class="uh">À construire</h3><div class="build">${blocks.join("")}</div>
+    <div class="btotal"><b>Total</b>${tot.map((x) => `<span>${x}</span>`).join("")}</div>
+    ${keys.length ? `<footer class="tnotes"><b>Repères</b><ol>${keys.map((k) => `<li>${notes[k]}</li>`).join("")}</ol></footer>` : ""}</section></div>`;
 }
 function updateTransport() { const el = document.getElementById("tres"); if (el) { hideTip(); el.innerHTML = transportResults(tLines()); } else render(); }
 function addTransportLine(c) {
@@ -1216,7 +1260,7 @@ function itemTip(c, extra) {
 }
 function showTip(el) {
   const ic = el.dataset.pick || el.dataset.tipitem;
-  const html = el.dataset.tip ? esc(el.dataset.tip) : ic && D && D.items[ic] ? itemTip(ic, el.dataset.tipExtra) : "";
+  const html = el.dataset.tip ? esc(el.dataset.tip).replace(/\n/g, "<br>") : ic && D && D.items[ic] ? itemTip(ic, el.dataset.tipExtra) : "";
   if (!html) return;
   tip.innerHTML = html; tip.hidden = false; tipEl = el;
   el.setAttribute("aria-describedby", "tip");

@@ -14,6 +14,7 @@ npm test
 | Idem avec Lingot de fer pur (7 minerai + 4 eau → 13 lingots) | 300 lingots → 161,54 + 180 (acier) = 341,54 minerai, 92,31 m³ d'eau |
 | Lingot d'aluminium 60/min | 60 m³ d'eau nette (après recyclage) |
 | Train, 1 400 minerai/min, aller-retour 4 min + arrêts | wagon 3 200 ÷ 4,9 min = 653,06/min → 3 wagons |
+| Idem avec tapis Mk.3 vers les quais | 2 × 270 = 540/min par quai → 3 quais ; 1 400 ÷ 3 = 466,67/min par quai → 2 tapis Mk.3 ; seul le repère « conteneur industriel » s'affiche |
 | Lien `#usine:ModularFrameHeavy*2;IronIngot=Alternate_PureIronIngot` | 341,54 minerai ; « Partager » redonne le même lien ; une usine existante n'est remplacée qu'après confirmation |
 | Les trois vues à 390 px | aucun défilement horizontal |
 | Toutes les pages testées | aucune ressource en erreur HTTP (404…) ni échec réseau |
