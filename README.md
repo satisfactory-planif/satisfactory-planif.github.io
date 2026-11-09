@@ -1,5 +1,7 @@
 # Planificateur Satisfactory
 
+**En ligne : https://satisfactory-planif.github.io/**
+
 Outil web statique (une page, sans build ni backend) pour Satisfactory 1.2, en français :
 
 - **Fiche pièce** : machine, ingrédients (par pièce ou par machine/min), ressources brutes totales, recettes alternatives comparées, onglets « Utilisé dans » et « Sans cette pièce ». Recettes standard uniquement, aucune donnée d'usine.
@@ -128,7 +130,9 @@ npm test
 
 ## Publication (GitHub Pages)
 
-Settings → Pages → *Deploy from a branch* → `main` / `(root)`. Le fichier `.nojekyll` évite le passage par Jekyll. Gratuit pour un dépôt public ; site ≤ 1 Go ; limite indicative de 100 Go de bande passante par mois ; usage non commercial.
+Site : https://satisfactory-planif.github.io/, servi par le dépôt `satisfactory-planif/satisfactory-planif.github.io` (organisation GitHub `satisfactory-planif`). Un dépôt nommé `<org>.github.io` est publié à la racine du domaine, sans chemin. Chaque push sur `main` met le site à jour (construction d'environ 20 s). Renommer l'organisation ou le dépôt changerait l'adresse et casserait les liens de partage déjà diffusés.
+
+Réglage : Settings → Pages → *Deploy from a branch* → `main` / `(root)`, activé automatiquement pour ce dépôt. Le fichier `.nojekyll` évite le passage par Jekyll. Gratuit pour un dépôt public ; site ≤ 1 Go ; limite indicative de 100 Go de bande passante par mois ; usage non commercial.
 
 ## Droits
 
