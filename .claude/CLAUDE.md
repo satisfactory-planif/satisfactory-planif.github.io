@@ -17,7 +17,7 @@ Garder ces fichiers à jour avec le code ; ne pas remettre de détail technique 
 - Pas de framework, pas de bundler, pas de dépendance d'exécution. Polices Google Fonts seulement.
 - Trois fichiers de code : `index.html` (structure, à la racine), `assets/style.css`, `assets/app.js` (une IIFE, script classique) ; données et images dans `assets/`. Pas de découpage supplémentaire (modules ES, plusieurs scripts) sans l'accord de l'utilisateur.
 - Interface 100 % en français, noms officiels du jeu (`data.json` → `fr`). Nombres au format français (`fmt`, `fmtIn`, `parseNum`).
-- Couleurs uniquement via les variables CSS ; toute nouvelle variable doit exister en clair ET dans les deux blocs sombres (`prefers-color-scheme` et `[data-theme="dark"]`).
+- Couleurs uniquement via les variables CSS de `:root` (thème sombre unique, `color-scheme: dark`). Pas de thème clair, pas de `prefers-color-scheme` ni de `data-theme`.
 - Saisies numériques : réutiliser la logique existante (virgule, 2 décimales, `MAX_RATE`, valeur restaurée au blur). Ne jamais re-rendre un champ en cours de frappe (le curseur saute) : mettre à jour seulement la zone de résultats (`updateResults`, `updateTransport`).
 - `localStorage` toujours via `store.get/set` (try/catch). Nouvelle clé : préfixe `sp-`, et l'ajouter à la liste de `docs/code/interface.md`.
 - La fiche pièce ne montre que les recettes standard ; les choix de recettes vivent dans Mon usine (`choiceF`).
@@ -31,7 +31,7 @@ Garder ces fichiers à jour avec le code ; ne pas remettre de détail technique 
 
 ## Vérification avant de terminer
 
-1. `python3 -m http.server 8000` puis contrôle visuel avec Playwright (Chromium déjà installé si `npx playwright install chromium` a été fait), en clair et en sombre, à 1 400 px et 390 px.
+1. `python3 -m http.server 8000` puis contrôle visuel avec Playwright (Chromium déjà installé si `npx playwright install chromium` a été fait), à 1 400 px et 390 px, navigateur en `colorScheme: 'light'` (le site doit rester sombre).
 2. `npm test` doit passer ; ajouter un cas à `tests/smoke.js` pour tout nouveau calcul, avec une valeur vérifiée à la main (et le reporter dans `docs/projet/tests.md`).
 3. Aucune erreur dans la console.
 
