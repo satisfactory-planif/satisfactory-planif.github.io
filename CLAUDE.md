@@ -5,7 +5,7 @@ Projet : planificateur Satisfactory 1.2, page statique publiée sur GitHub Pages
 ## Règles de code
 
 - Pas de framework, pas de bundler, pas de dépendance d'exécution. Polices Google Fonts seulement.
-- Tout est dans `index.html` (CSS puis JS dans une IIFE). Ne pas découper en fichiers séparés sans l'accord de l'utilisateur.
+- Trois fichiers : `index.html` (structure), `style.css`, `app.js` (une IIFE, script classique). Pas de découpage supplémentaire (modules ES, plusieurs scripts) sans l'accord de l'utilisateur.
 - Interface 100 % en français, noms officiels du jeu (`data.json` → `fr`). Nombres au format français (`fmt`, `fmtIn`, `parseNum`).
 - Couleurs uniquement via les variables CSS ; toute nouvelle variable doit exister en clair ET dans les deux blocs sombres (`prefers-color-scheme` et `[data-theme="dark"]`).
 - Saisies numériques : réutiliser la logique existante (virgule, 2 décimales, `MAX_RATE`, valeur restaurée au blur). Ne jamais re-rendre un champ en cours de frappe (le curseur saute) : mettre à jour seulement la zone de résultats (`updateResults`, `updateTransport`).

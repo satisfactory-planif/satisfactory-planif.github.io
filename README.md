@@ -18,7 +18,9 @@ python3 -m http.server 8000
 ## Structure
 
 ```
-index.html            toute l'application (HTML + CSS + JS dans un seul fichier)
+index.html            structure de la page (en-tête, catalogue, zone principale)
+style.css             tous les styles, variables de thème comprises
+app.js                toute la logique (IIFE, script classique, sans module)
 data.json             données du jeu, générées par scripts/build_data.py
 icons/<Item>.png      168 icônes d'objets (64 px), nom = classe de l'objet (Desc_IronPlate_C.png)
 machines/<Build>.png  11 icônes de machines (Build_ConstructorMk1_C.png…)
