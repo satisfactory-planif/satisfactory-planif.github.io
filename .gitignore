@@ -1,0 +1,6 @@
+# Fichiers bruts du jeu (Coffee Stain Studios) : ne pas publier
+game-docs/
+node_modules/
+*.bak*.html
+.DS_Store
+Thumbs.db

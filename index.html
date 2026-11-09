@@ -1,0 +1,1609 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Planificateur de production Satisfactory 1.2 : fiches des pièces, calcul d'usine, recettes alternatives et transport.">
+<title>Planificateur Satisfactory</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: steel workbench. Left rail = parts catalogue, right = production sheet for the chosen part at a target rate. */
+:root {
+  --bg: #e9edef; --surface: #ffffff; --sunk: #f2f4f5; --ink: #1a2125; --muted: #5b6870; --line: #d2d9dd;
+  --rust: #a8461a; --rust-ink: #ffffff; --rust-soft: #f5e2d7; --down: #3e6c8a; --down-soft: #dde9f1;
+  --star: #8f6800; --ok: #2f7a4a; --warn: #9a5b00;
+  --tip-bg: #1f272b; --tip-fg: #f1f4f5; --tip-muted: #a9b5bb; --tip-line: #3a464c; --tip-accent: #f0a274; --tip-shadow: rgba(20, 28, 32, .28); --tip-border: #1f272b;
+  --sh-1: 0 1px 2px rgba(22, 34, 40, .08), 0 2px 6px rgba(22, 34, 40, .06);
+  --sh-2: 0 2px 4px rgba(22, 34, 40, .06), 0 8px 22px rgba(22, 34, 40, .10);
+  --sh-btn: 0 1px 0 rgba(255, 255, 255, .9) inset, 0 1px 2px rgba(22, 34, 40, .14), 0 2px 5px rgba(22, 34, 40, .08);
+  --sh-in: inset 0 1px 3px rgba(22, 34, 40, .12);
+  --btn-top: #ffffff; --btn-bot: #eef1f3; --hl: rgba(255, 255, 255, .7);
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121618; --surface: #1b2124; --sunk: #161b1e; --ink: #e4e9eb; --muted: #94a2a9; --line: #2c363b;
+    --rust: #e27b47; --rust-ink: #1a0f09; --rust-soft: #3a2216; --down: #7fb0d0; --down-soft: #18293a;
+    --star: #e0b84a; --ok: #6cc28c; --warn: #e3a64a; color-scheme: dark;
+    --tip-bg: #283135; --tip-fg: #e4e9eb; --tip-muted: #9aa8af; --tip-line: #3b474d; --tip-accent: #e8875a; --tip-shadow: rgba(0, 0, 0, .6); --tip-border: #46535a;
+    --sh-1: 0 1px 2px rgba(0, 0, 0, .45), 0 3px 8px rgba(0, 0, 0, .30);
+    --sh-2: 0 2px 6px rgba(0, 0, 0, .45), 0 12px 28px rgba(0, 0, 0, .40);
+    --sh-btn: 0 1px 0 rgba(255, 255, 255, .07) inset, 0 1px 2px rgba(0, 0, 0, .55), 0 3px 8px rgba(0, 0, 0, .35);
+    --sh-in: inset 0 1px 4px rgba(0, 0, 0, .45);
+    --btn-top: #252d31; --btn-bot: #1d2427; --hl: rgba(255, 255, 255, .05);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121618; --surface: #1b2124; --sunk: #161b1e; --ink: #e4e9eb; --muted: #94a2a9; --line: #2c363b;
+  --rust: #e27b47; --rust-ink: #1a0f09; --rust-soft: #3a2216; --down: #7fb0d0; --down-soft: #18293a;
+  --star: #e0b84a; --ok: #6cc28c; --warn: #e3a64a; color-scheme: dark;
+    --tip-bg: #283135; --tip-fg: #e4e9eb; --tip-muted: #9aa8af; --tip-line: #3b474d; --tip-accent: #e8875a; --tip-shadow: rgba(0, 0, 0, .6); --tip-border: #46535a;
+    --sh-1: 0 1px 2px rgba(0, 0, 0, .45), 0 3px 8px rgba(0, 0, 0, .30);
+    --sh-2: 0 2px 6px rgba(0, 0, 0, .45), 0 12px 28px rgba(0, 0, 0, .40);
+    --sh-btn: 0 1px 0 rgba(255, 255, 255, .07) inset, 0 1px 2px rgba(0, 0, 0, .55), 0 3px 8px rgba(0, 0, 0, .35);
+    --sh-in: inset 0 1px 4px rgba(0, 0, 0, .45);
+    --btn-top: #252d31; --btn-bot: #1d2427; --hl: rgba(255, 255, 255, .05);
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font: 17px/1.5 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 24px 48px;
+}
+.wrap { max-width: 1680px; margin: 0 auto; display: grid; gap: 18px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.05; }
+h1 { font-size: clamp(30px, 4.4vw, 46px); text-transform: uppercase; }
+h1 span { color: var(--rust); }
+h3 { font-size: 23px; text-transform: uppercase; }
+.eyebrow { font: 500 13px/1.25 var(--mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.lede { color: var(--muted); max-width: 72ch; margin: 6px 0 0; }
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--rust); outline-offset: 2px; }
+.ico { width: 38px; height: 38px; object-fit: contain; flex: none; }
+.ico.sm { width: 30px; height: 30px; }
+.ico.lg { width: 96px; height: 96px; }
+.ico.ph { display: inline-block; border-radius: 4px; background: var(--sunk); border: 1px solid var(--line); }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.layout { display: grid; grid-template-columns: 370px minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+
+/* Catalogue */
+.cat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px);
+  max-height: calc(100vh - 24px - env(safe-area-inset-top, 0px)); display: grid; grid-template-rows: auto minmax(0, 1fr); min-width: 0; }
+@media (max-width: 920px) { .cat { position: static; max-height: 300px; } }
+.cat-head { padding: 12px; border-bottom: 1px solid var(--line); display: grid; gap: 8px; }
+.cat-head input { width: 100%; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.cat-list { overflow-y: auto; padding: 4px 6px 10px; }
+.cat-group summary { font: 600 14px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 10px 6px 6px; cursor: pointer; }
+.pick { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; cursor: pointer; }
+.pick:hover { background: var(--sunk); }
+.pick.on { background: var(--rust-soft); border-color: var(--rust); }
+.pick span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; }
+
+/* Sheet */
+.sheet { display: grid; gap: 18px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.card > section { padding: 16px 18px; border-top: 1px solid var(--line); min-width: 0; }
+.card > section:first-child { border-top: 0; }
+.head { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+.head h2 { font-size: clamp(34px, 4.5vw, 46px); }
+.head .en { color: var(--muted); font-size: 15px; }
+.head > div { min-width: 0; flex: 1 1 240px; }
+.target { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; }
+.target label { font-weight: 600; }
+.target input { width: 120px; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font-family: var(--mono); text-align: right; }
+.btn { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; font-size: 15px; }
+.btn:hover { border-color: var(--rust); color: var(--rust); }
+.btn.primary:hover { color: var(--rust-ink); filter: brightness(1.08); }
+.mode:hover { border-color: var(--rust); }
+.tab:hover { color: var(--rust); }
+input[type="checkbox"] { accent-color: var(--rust); width: 18px; height: 18px; }
+.btn.primary { background: var(--rust); color: var(--rust-ink); border-color: var(--rust); font-weight: 600; }
+select.rsel { width: 100%; max-width: 320px; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 15px; }
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 700px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { background: var(--sunk); border-radius: 6px; padding: 10px; min-width: 0; }
+.stat b { display: block; font: 500 24px/1.15 var(--mono); font-variant-numeric: tabular-nums; }
+.stat span { font-size: 14px; color: var(--muted); }
+.raws { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.raw { display: flex; gap: 10px; align-items: center; background: var(--sunk); border-radius: 6px; padding: 8px 10px; min-width: 0; }
+.raw div { min-width: 0; }
+.raw b { font: 500 19px/1.2 var(--mono); font-variant-numeric: tabular-nums; display: block; }
+.raw small { color: var(--muted); font-size: 14px; display: block; }
+.tbl { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 16px; }
+th { font: 500 13px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); text-align: left; padding: 0 8px 8px; white-space: nowrap; }
+td { padding: 7px 8px; border-top: 1px solid var(--line); vertical-align: middle; }
+th.r, td.r { text-align: right; }
+tr.step-row td { background: var(--sunk); font: 600 14px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 6px 8px; }
+.it { display: flex; align-items: center; gap: 8px; min-width: 150px; }
+td .mach { display: inline-block; min-width: 120px; }
+.link { background: none; border: 0; padding: 0; color: var(--ink); cursor: pointer; text-align: left; font-weight: 600; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.link:hover { text-decoration-color: var(--rust); color: var(--rust); }
+.tag { font: 500 12px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em; padding: 3px 5px; border-radius: 3px; border: 1px solid currentColor; }
+.tag.alt { color: var(--star); }
+.tag.raw { color: var(--down); }
+.tag.loop { color: var(--warn); }
+.mach small { color: var(--muted); display: block; font-size: 14px; }
+.note { font-size: 15px; color: var(--muted); margin: 8px 0 0; }
+.tree { font-size: 16px; }
+.tree details { margin-left: 16px; border-left: 1px solid var(--line); padding-left: 10px; }
+.tree > details { margin-left: 0; }
+.tree summary { cursor: pointer; padding: 3px 0; display: list-item; }
+.tree .row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; vertical-align: middle; }
+.tree .leaf { margin-left: 16px; padding: 3px 0 3px 10px; border-left: 1px solid var(--line); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tree .q { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px 5px 6px; cursor: pointer; font-size: 15px; }
+.chip:hover { border-color: var(--rust); }
+.chip.static:hover { border-color: var(--line); }
+.dep-step { display: grid; grid-template-columns: 56px minmax(0, 1fr); border-top: 1px solid var(--line); }
+.dep-step:first-child { border-top: 0; }
+.dep-step > div:first-child { font: 700 26px/1 var(--display); padding: 10px 0; color: var(--muted); }
+.dep-step .chips { padding: 8px 0; }
+.tabs { display: flex; gap: 4px; flex-wrap: wrap; padding: 10px 12px 0; border-bottom: 1px solid var(--line); }
+.tab { background: none; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0; padding: 8px 12px; cursor: pointer; font-weight: 600; color: var(--muted); margin-bottom: -1px; }
+.tab[aria-selected="true"] { color: var(--ink); background: var(--rust-soft); border-color: var(--rust); }
+.empty { color: var(--muted); }
+.foot { font-size: 13px; color: var(--muted); }
+.foot ul { margin: 6px 0 0; padding-left: 18px; }
+@media (prefers-reduced-motion: no-preference) { .pick, .btn, .chip { transition: background-color .12s, border-color .12s; } }
+.modes { display: flex; gap: 6px; flex-wrap: wrap; }
+.mode { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; cursor: pointer; font-weight: 600; color: var(--muted); }
+.mode[aria-selected="true"] { background: var(--rust-soft); color: var(--ink); border-color: var(--rust); }
+.mode .count { font: 500 13px/1 var(--mono); background: var(--rust); color: var(--rust-ink); border-radius: 999px; padding: 3px 7px; margin-left: 4px; }
+.goals { display: grid; gap: 8px; }
+.goal { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 12px; align-items: center; background: var(--sunk); border-radius: 6px; padding: 8px 10px; }
+@media (max-width: 560px) { .goal { grid-template-columns: auto minmax(0, 1fr); } .goal .g-rate, .goal .btn { grid-column: 2; justify-self: start; } }
+.g-name { min-width: 0; font-weight: 600; }
+.g-rate input { width: 110px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-family: var(--mono); text-align: right; }
+.tag.tgt { color: var(--rust); }
+td .sub { display: block; color: var(--ok); font-size: 14px; }
+.note.ok { color: var(--ok); }
+.btn.danger { border-color: var(--rust); color: var(--rust); }
+hr.sep { border: 0; border-top: 1px dashed var(--line); margin: 14px 0; }
+#tip { position: fixed; z-index: 50; left: 0; top: 0; max-width: min(320px, calc(100vw - 16px)); background: var(--tip-bg); color: var(--tip-fg);
+  border: 1px solid var(--tip-border); border-radius: 8px; padding: 10px 12px; font-size: 14px; line-height: 1.4; box-shadow: 0 8px 24px var(--tip-shadow); }
+#tip .t-head { display: flex; gap: 10px; align-items: center; }
+#tip .t-head .ico { width: 36px; height: 36px; }
+#tip .ph { background: var(--tip-line); border: 0; }
+#tip b { display: block; font-size: 16px; line-height: 1.2; }
+#tip .t-en { color: var(--tip-muted); font-size: 13px; }
+#tip .t-meta { font: 500 11px/1.3 var(--mono); text-transform: uppercase; letter-spacing: .1em; color: var(--tip-accent); margin-top: 8px; }
+#tip .t-row { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--tip-line); }
+#tip .t-row span { color: var(--tip-muted); }
+#tip .num { color: var(--tip-fg); }
+@media (prefers-reduced-motion: no-preference) { #tip:not([hidden]) { animation: tipIn .12s ease-out; } @keyframes tipIn { from { opacity: 0; transform: translateY(2px); } } }
+.contents { display: contents; }
+.card > .contents > section { padding: 16px 18px; border-top: 1px solid var(--line); min-width: 0; }
+.mline { display: inline-flex; align-items: center; gap: 6px; }
+.mico { opacity: .95; }
+input.bad { border-color: var(--rust) !important; outline-color: var(--rust); }
+#tip .mico { width: 18px; height: 18px; vertical-align: -4px; }
+.xp { width: 26px; height: 26px; flex: none; border: 1px solid var(--line); border-radius: 5px; background: var(--surface); cursor: pointer; display: inline-grid; place-items: center; padding: 0; color: var(--muted); font-size: 13px; }
+.xp:hover { border-color: var(--rust); color: var(--rust); }
+.xp[aria-expanded="true"] span { display: inline-block; transform: rotate(90deg); }
+tr.xopen > td { border-bottom: 0; background: var(--sunk); }
+tr.xrow > td { border-top: 0; background: var(--sunk); padding: 4px 12px 16px 46px; }
+.xbox { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 20px; }
+@media (max-width: 900px) { .xbox { grid-template-columns: minmax(0, 1fr); } }
+.xcol { min-width: 0; }
+.xcol .tree { margin-top: 6px; }
+.chip.static { cursor: default; }
+.ufilters { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; margin-bottom: 10px; }
+.uchecks { display: flex; flex-wrap: wrap; gap: 8px 22px; margin-bottom: 18px; }
+.choices { display: grid; gap: 8px; justify-items: start; margin-top: 12px; }
+.choices .note { margin: 0; }
+.cchip { cursor: default; padding-right: 4px; }
+.cchip .link { font-weight: 600; }
+.cx { width: 24px; height: 24px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0; margin-left: 2px; }
+.cx:hover { background: var(--rust-soft); color: var(--rust); }
+.ufilters .sfield { flex: 1 1 240px; min-width: 0; }
+.ufilters input[type="search"] { width: 100%; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.ufilters select { background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 7px 8px; max-width: 100%; }
+.ucheck { display: inline-flex; gap: 6px; align-items: center; cursor: pointer; }
+h3.uh { font-size: 20px; margin-bottom: 8px; }
+.sfield { position: relative; }
+.sfield input { padding-right: 38px !important; }
+.sfield input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+.sclear { position: absolute; right: 5px; top: 50%; transform: translateY(-50%); width: 28px; height: 28px; border: 0; border-radius: 50%; background: transparent; color: var(--muted); font-size: 22px; line-height: 1; cursor: pointer; display: grid; place-items: center; padding: 0; }
+.sclear:hover { background: var(--line); color: var(--ink); }
+.sfield input:placeholder-shown + .sclear { display: none; }
+.tlink { background: none; border: 0; padding: 0; font: inherit; color: inherit; cursor: pointer; text-align: left; text-decoration: underline; text-decoration-color: var(--tip-line); text-underline-offset: 3px; }
+.tlink:hover { color: var(--tip-accent); text-decoration-color: var(--tip-accent); }
+#tip b .tlink { font-weight: 700; }
+.rpick { display: inline-flex; align-items: center; gap: 8px; width: 100%; max-width: 340px; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; cursor: pointer; text-align: left; font-size: 15px; color: var(--ink); }
+.rpick:hover { border-color: var(--rust); }
+.rpick[aria-expanded="true"] { border-color: var(--rust); background: var(--surface); }
+.rp-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rp-chev { color: var(--muted); font-size: 12px; }
+.rpick .tag, .rpick .ico { flex: none; }
+#rmenu { position: fixed; z-index: 60; overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px var(--tip-shadow); padding: 6px; display: grid; gap: 4px; }
+.ropt { border: 1px solid transparent; border-radius: 6px; padding: 8px 10px; cursor: pointer; display: grid; gap: 6px; }
+.ropt:hover, .ropt:focus { background: var(--sunk); outline: none; border-color: var(--rust); }
+.ropt:focus-visible { border-color: var(--rust); }
+.ropt[aria-selected="true"] { background: var(--rust-soft); border-color: var(--rust); }
+.ro-name { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.ro-name > span:nth-child(2), .ro-name > span:only-child { flex: 1; min-width: 0; }
+.ro-cur { font: 500 11px/1 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--rust); }
+.tag.std { color: var(--ok); }
+.ro-mach { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.ro-flow { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: center; font-size: 14px; }
+.ro-col { display: grid; gap: 3px; min-width: 0; }
+.ro-it { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.ro-it .ico.sm { width: 24px; height: 24px; }
+.ro-it.byp { color: var(--muted); }
+.ro-arrow { color: var(--muted); font-size: 18px; }
+.choices-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.rpick.alt { border-color: var(--star); box-shadow: inset 0 0 0 1px var(--star); }
+.rpick.alt:hover, .rpick.alt[aria-expanded="true"] { border-color: var(--rust); box-shadow: inset 0 0 0 1px var(--rust); }
+.ufilters .sfield { flex: 0 1 340px !important; }
+td small.sur { display: block; color: var(--warn); font-size: 14px; white-space: nowrap; }
+.tag.ok { color: var(--ok); }
+tr.flash > td { animation: rowFlash 1.6s ease-out; }
+@keyframes rowFlash { 0%, 40% { background: var(--rust-soft); } 100% { background: transparent; } }
+@media (prefers-reduced-motion: reduce) { tr.flash > td { animation: none; background: var(--rust-soft); } }
+#modal { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; }
+#modal[hidden] { display: none; }
+#rmenu[hidden], #tip[hidden] { display: none; }
+.mback { position: absolute; inset: 0; background: rgba(10, 14, 16, .55); }
+.mbox { position: relative; width: min(620px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 20px 50px var(--tip-shadow); padding: 20px 22px; display: grid; gap: 12px; }
+.mbox h3 { font-size: 26px; }
+.mbody p { margin: 0 0 8px; }
+.mlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.mrow { display: flex; gap: 10px; align-items: flex-start; background: var(--sunk); border-radius: 6px; padding: 8px 10px; }
+.mcmp { display: grid; gap: 2px; font-size: 14px; color: var(--muted); margin-top: 2px; }
+.mactions { display: grid; gap: 8px; }
+.mbtn { border-radius: 8px; text-align: left; padding: 10px 14px; font-weight: 600; display: grid; gap: 2px; }
+.mactions.row { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+.mactions.row .mbtn { text-align: center; justify-items: center; }
+.mbtn small { font-weight: 400; font-size: 13px; color: var(--muted); }
+.mbtn.primary small { color: inherit; opacity: .85; }
+.btn.danger { background: var(--rust); color: var(--rust-ink); border-color: var(--rust); }
+.btn.danger:hover { color: var(--rust-ink); filter: brightness(1.08); }
+.pickrow { display: flex; align-items: center; gap: 4px; }
+.pickrow .pick { flex: 1; min-width: 0; }
+.padd { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 1px solid var(--rust); background: var(--surface); color: var(--rust); line-height: 0; display: grid; place-items: center; padding: 0; cursor: pointer; opacity: 0; }
+.pickrow:hover .padd, .pickrow:focus-within .padd { opacity: 1; }
+.padd:hover { background: var(--rust); color: var(--rust-ink); }
+@media (hover: none) { .padd { opacity: 1; } }
+#toast { position: fixed; z-index: 90; left: 50%; transform: translateX(-50%); bottom: calc(20px + env(safe-area-inset-bottom, 0px)); max-width: calc(100vw - 32px); background: var(--tip-bg); color: var(--tip-fg); border: 1px solid var(--tip-border); border-radius: 8px; padding: 10px 14px; box-shadow: 0 8px 24px var(--tip-shadow); font-size: 15px; }
+#toast[hidden] { display: none; }
+#toast .link { color: var(--tip-accent); margin-left: 6px; text-decoration-color: currentColor; }
+#ipick { position: fixed; z-index: 60; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 12px 32px var(--tip-shadow); padding: 8px; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 6px; }
+#ipick[hidden] { display: none; }
+#ipick input { width: 100%; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.iplist { overflow-y: auto; display: grid; align-content: start; gap: 1px; }
+.ip-cat { font: 600 12px/1.2 var(--mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 10px 6px 4px; }
+.ipo { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; background: none; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; cursor: pointer; font-size: 15px; color: var(--ink); }
+.ipo:hover, .ipo:focus { background: var(--sunk); border-color: var(--rust); outline: none; }
+.ipo span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ipo small { color: var(--muted); font-size: 12px; }
+.addgoal { margin-top: 10px; justify-self: start; }
+.goal { grid-template-columns: auto minmax(0, 1fr) minmax(0, 300px) auto auto !important; }
+@media (max-width: 760px) { .goal { grid-template-columns: auto minmax(0, 1fr) !important; } .goal .g-recipe, .goal .g-rate, .goal .btn { grid-column: 2; justify-self: start; } .goal .g-recipe { justify-self: stretch; } }
+.goal.flash { animation: rowFlash 1.6s ease-out; }
+.made { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+.made b { font-size: 19px; }
+.rcards { display: grid; gap: 10px; margin-top: 10px; }
+.rcard { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 8px; }
+.rcard.alt { border-color: var(--star); }
+.rc-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.rc-mach { display: inline-flex; align-items: center; gap: 6px; color: var(--muted); font-size: 14px; margin-left: auto; }
+.rc-flow { display: grid; gap: 8px; }
+.rc-byp { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 14px; color: var(--muted); }
+details.others > summary { cursor: pointer; }
+.sec-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; margin-bottom: 12px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 2px; background: var(--sunk); }
+.segb { border: 0; background: none; border-radius: 999px; padding: 6px 12px; cursor: pointer; font-size: 14px; color: var(--muted); }
+.segb:hover { color: var(--rust); }
+.segb[aria-pressed="true"] { background: var(--rust-soft); color: var(--ink); box-shadow: inset 0 0 0 1px var(--rust); }
+.chip .qn { font-weight: 500; color: var(--rust); }
+.rc-raw { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 14px; color: var(--muted); padding-top: 8px; border-top: 1px dashed var(--line); }
+.rc-mach .tag { margin-left: 4px; }
+
+/* ---------- depth ---------- */
+.card, .cat { box-shadow: var(--sh-2), inset 0 1px 0 var(--hl); border-color: var(--line); }
+.stat, .raw, .goal { box-shadow: var(--sh-1), inset 0 1px 0 var(--hl); border: 1px solid var(--line); }
+.rcard { box-shadow: var(--sh-1); background: var(--surface); }
+.tabs { background: var(--sunk); border-radius: 8px 8px 0 0; }
+.btn, .mode, .chip:not(.static), .rpick, .xp, .padd, .segb[aria-pressed="true"] {
+  box-shadow: var(--sh-btn);
+}
+.btn, .mode, .chip:not(.static), .rpick, .xp { background: linear-gradient(180deg, var(--btn-top), var(--btn-bot)); }
+.btn, .mode, .chip, .rpick, .xp, .padd, .pick, .ipo, .segb, .tab { transition: transform .08s ease, box-shadow .12s ease, border-color .12s, background-color .12s, color .12s; }
+.btn:hover, .mode:hover, .chip:not(.static):hover, .rpick:hover, .xp:hover { transform: translateY(-1px); box-shadow: var(--sh-2); }
+.btn:active, .mode:active, .chip:not(.static):active, .rpick:active, .xp:active, .padd:active { transform: translateY(1px); box-shadow: var(--sh-in); }
+.btn.primary, .btn.danger { background: linear-gradient(180deg, color-mix(in srgb, var(--rust) 88%, #fff), var(--rust)); box-shadow: 0 1px 0 rgba(255, 255, 255, .25) inset, 0 2px 4px color-mix(in srgb, var(--rust) 35%, transparent), 0 6px 14px color-mix(in srgb, var(--rust) 25%, transparent); }
+.mode[aria-selected="true"], .tab[aria-selected="true"] { background: var(--rust-soft); box-shadow: var(--sh-1), inset 0 -2px 0 var(--rust); }
+.tab[aria-selected="true"] { box-shadow: 0 -2px 6px rgba(0, 0, 0, .06), inset 0 2px 0 var(--rust); }
+.pick.on { box-shadow: var(--sh-1), inset 3px 0 0 var(--rust); }
+.pick:hover { box-shadow: var(--sh-1); }
+.rpick.alt { box-shadow: var(--sh-btn), inset 0 0 0 1px var(--star); }
+.rpick.alt:hover, .rpick.alt[aria-expanded="true"] { box-shadow: var(--sh-2), inset 0 0 0 1px var(--rust); }
+input[type="search"], input[type="text"], .ufilters select, #ipick input, .cat-head input { box-shadow: var(--sh-in); }
+input:focus-visible, select:focus-visible { box-shadow: var(--sh-in), 0 0 0 3px color-mix(in srgb, var(--rust) 25%, transparent); outline: none; border-color: var(--rust) !important; }
+.seg { box-shadow: var(--sh-in); }
+#rmenu, #ipick, .mbox { box-shadow: var(--sh-2), 0 18px 40px rgba(0, 0, 0, .18); }
+tr.step-row td { box-shadow: inset 0 1px 0 var(--line), inset 0 -1px 0 var(--line); }
+tr.xrow > td { box-shadow: inset 0 6px 8px -6px rgba(0, 0, 0, .18); }
+@media (prefers-reduced-motion: reduce) { .btn, .mode, .chip, .rpick, .xp, .padd { transition: none; } .btn:hover, .mode:hover, .chip:hover, .rpick:hover, .xp:hover, .btn:active, .chip:active { transform: none; } }
+.recl { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
+.recl .from, .rest { color: var(--muted); font-size: 14px; }
+.rest { margin-left: 4px; }
+.srcl { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px 1px 3px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; vertical-align: middle; }
+.srcl .ico.sm { width: 20px; height: 20px; }
+.srcl:hover { border-color: var(--rust); color: var(--rust); }
+.tsettings { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px 28px; }
+.tgroup { display: grid; gap: 10px; align-content: start; }
+.tfield { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.tlabel { min-width: 170px; font-weight: 600; }
+.time { display: inline-flex; align-items: center; gap: 6px; }
+.time input, #tbatt { width: 64px; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-family: var(--mono); text-align: right; box-shadow: var(--sh-in); }
+#tbatt { width: 90px; }
+#tmaxw { width: 64px; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-family: var(--mono); text-align: right; box-shadow: var(--sh-in); }
+.goal.tline { grid-template-columns: auto minmax(0, 1fr) auto auto !important; }
+table.tcmp td { vertical-align: top; }
+.vcell { width: 100%; min-width: 180px; text-align: left; display: grid; gap: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; cursor: pointer; color: var(--ink); font: inherit; box-shadow: var(--sh-btn); }
+.vcell:hover { border-color: var(--rust); transform: translateY(-1px); }
+.vcell.on { background: var(--rust-soft); border-color: var(--rust); box-shadow: var(--sh-1), inset 0 0 0 1px var(--rust); }
+.vcell small { color: var(--muted); font-size: 13px; }
+.vcell small.warn { color: var(--warn); }
+.tsub { margin: -4px 0 0; font-size: 14px; }
+.head > .seg { flex: 0 0 auto; margin-left: auto; align-self: center; }
+.tstops { font-size: 15px; }
+.tdetail .raw b { font: 600 17px/1.3 var(--body); }
+.tdetail { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; margin-top: 12px; }
+</style>
+<style>
+/* Base reset (the Claude artifact host used to add it) */
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; }
+img, svg { max-width: 100%; }
+[hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Satisfactory 1.2 · données officielles du jeu</div>
+    <h1>Planificateur <span>Satisfactory</span></h1>
+    <p class="lede">La fiche d'une pièce montre de quoi elle est faite, dans quelle machine, et où elle sert. Mon usine calcule, pour les pièces et débits choisis, chaque étape jusqu'aux ressources brutes, le nombre de machines, l'énergie et les sous-produits, avec vos recettes alternatives.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="cat" aria-label="Catalogue">
+      <div class="cat-head">
+        <div class="sfield"><input id="q" type="search" placeholder="Chercher (français ou anglais)" autocomplete="off" aria-label="Chercher une pièce"><button class="sclear" type="button" data-clear-for="q" aria-label="Effacer la recherche">×</button></div>
+      </div>
+      <div class="cat-list" id="catlist"><p class="empty" style="padding:10px">Chargement des données…</p></div>
+    </aside>
+
+    <main class="sheet" id="sheet">
+      <div class="card"><section><p class="empty">Chargement des recettes du jeu…</p></section></div>
+    </main>
+  </div>
+</div>
+
+<div id="tip" role="tooltip" hidden></div>
+<script>
+(() => {
+"use strict";
+let D = null;
+const nf = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 2 });
+const fmt = (x) => nf.format(Math.abs(x) < 1e-9 ? 0 : x);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+};
+const EPS = 1e-9;
+
+/* Recipe choices (item -> recipe id, "" = external input) exist only in "Mon usine".
+   Part sheets always show the standard recipes. */
+let choiceF = store.get("sp-choice-f", null) || store.get("sp-choice", {});
+let choice = {};
+function useChoices() { choice = view === "factory" ? choiceF : {}; }
+function saveChoice() { store.set("sp-choice-f", choiceF); }
+let factory = store.get("sp-factory", []);   // [{c, rate}]
+let sel = null;
+let view = "item";                           // "item" | "factory"
+let othersOpen = false;
+let qMode = store.get("sp-qmode", "unit");   // "unit" = for 1 part, "machine" = per minute for 1 machine
+let tab = "uses", tabI = store.get("sp-tab-i", "uses"), tabF = store.get("sp-tab-f", "steps");
+let flash = "";
+const openRows = new Set();
+const uF = { q: "", cat: "", alt: true, ev: false };
+const hashOf = (c) => c.toLowerCase().replace(/_/g, "-");
+
+/* ---------- data helpers ---------- */
+const name = (c) => (D.items[c] ? D.items[c].fr : c);
+const unit = (c) => (D.items[c] && D.items[c].fl ? " m³" : "");
+const icon = (c, cls = "") => D.items[c] && D.items[c].ico
+  ? `<img class="ico ${cls}" src="icons/${c}.png" alt="" loading="lazy" width="64" height="64">`
+  : `<span class="ico ph ${cls}" aria-hidden="true"></span>`;
+const recipeOf = (c) => (Object.prototype.hasOwnProperty.call(choice, c) ? choice[c] || null : D.std[c] || null);
+const perMin = (r, c, side) => { const R = D.recipes[r]; const e = R[side].find((x) => x[0] === c); return e ? e[1] * 60 / R.t : 0; };
+const mName = (m) => D.machines[m] || m;
+const mIcon = (m) => `<img class="ico sm mico" src="machines/${m}.png" alt="" loading="lazy" width="64" height="64">`;
+const fmtIn = (x) => String(+(+x).toFixed(2)).replace(".", ",");
+const round2 = (x) => Math.round(x * 100) / 100;
+const MAX_RATE = 100000;
+const clampRate = (x) => Math.min(MAX_RATE, round2(x));
+const parseNum = (s) => { const v = parseFloat(String(s).replace(/\s/g, "").replace(",", ".")); return v >= 0 && isFinite(v) ? v : null; };
+const defaultRate = (c) => { const r = recipeOf(c); return r ? perMin(r, c, "o") : 60; };
+
+/* Structural depth (steps from raw inputs) under current choices. */
+let lvlMemo = {};
+function lvlOf(c, stack = []) {
+  if (c in lvlMemo) return lvlMemo[c];
+  const r = recipeOf(c);
+  if (!r || stack.includes(c)) return 0;
+  let l = 0;
+  for (const [i] of D.recipes[r].i) if (!stack.includes(i) && i !== c) l = Math.max(l, lvlOf(i, stack.concat(c)) + (recipeOf(i) ? 1 : 0));
+  if (!stack.length) lvlMemo[c] = l;
+  return l;
+}
+/* Does the production tree of c (current choices) consume x? */
+let needMemo = {};
+function needs(c, x, stack = []) {
+  const key = c + "|" + x;
+  if (key in needMemo) return needMemo[key];
+  const r = recipeOf(c);
+  let v = false;
+  if (r && !stack.includes(c)) {
+    for (const [i] of D.recipes[r].i) {
+      if (i === x || (!stack.includes(i) && needs(i, x, stack.concat(c)))) { v = true; break; }
+    }
+  }
+  if (!stack.length) needMemo[key] = v;
+  return v;
+}
+
+/* ---------- planner: targets -> net production, with by-product recovery ---------- */
+function plan(targets) {
+  let produce = {}, res = null, converged = false;
+  for (let it = 0; it < 400; it++) {
+    const demand = {}, supply = {}, mach = {}, supplyBy = {};
+    for (const t of targets) demand[t.c] = (demand[t.c] || 0) + t.rate;
+    for (const c in produce) {
+      const q = produce[c];
+      if (q <= EPS) continue;
+      const r = recipeOf(c), R = D.recipes[r];
+      const n = q / perMin(r, c, "o");
+      mach[c] = { r, n };
+      for (const [i, a] of R.i) demand[i] = (demand[i] || 0) + a * 60 / R.t * n;
+      for (const [b, a] of R.o) if (b !== c) {
+        supply[b] = (supply[b] || 0) + a * 60 / R.t * n;
+        (supplyBy[b] ||= {})[c] = (supplyBy[b][c] || 0) + a * 60 / R.t * n;
+      }
+    }
+    const next = {};
+    let delta = 0;
+    for (const c in demand) {
+      if (!recipeOf(c)) continue;
+      const v = Math.max(0, demand[c] - (supply[c] || 0));
+      if (v > EPS) next[c] = v;
+      delta = Math.max(delta, Math.abs(v - (produce[c] || 0)));
+    }
+    for (const c in produce) if (!(c in next)) delta = Math.max(delta, produce[c]);
+    res = { demand, supply, mach, produce, supplyBy };
+    produce = next;
+    if (delta < 1e-7) { converged = true; break; }
+  }
+  const { demand, supply, mach, supplyBy } = res;
+  const raw = {}, recovered = {}, surplus = {};
+  for (const c in demand) if (!recipeOf(c)) { const v = demand[c] - (supply[c] || 0); if (v > EPS) raw[c] = v; }
+  for (const b in supply) {
+    const used = Math.min(supply[b], demand[b] || 0);
+    if (used > EPS) recovered[b] = used;
+    if (supply[b] - used > EPS) surplus[b] = supply[b] - used;
+  }
+  const flows = {};
+  for (const t of targets) (flows[t.c] ||= {})["__goal"] = ((flows[t.c] || {})["__goal"] || 0) + t.rate;
+  for (const c in mach) {
+    const R = D.recipes[mach[c].r];
+    for (const [i, a] of R.i) (flows[i] ||= {})[c] = ((flows[i] || {})[c] || 0) + a * 60 / R.t * mach[c].n;
+  }
+  let nMach = 0, mw = 0;
+  for (const c in mach) { nMach += Math.ceil(mach[c].n - 1e-6); mw += mach[c].n * D.recipes[mach[c].r].mw; }
+  return { demand, supply, mach, raw, recovered, surplus, nMach, mw, converged, flows, supplyBy };
+}
+
+/* ---------- catalogue ---------- */
+function renderCatalogue() {
+  const q = document.getElementById("q").value.trim().toLowerCase();
+  const groups = {};
+  for (const c in D.items) {
+    const it = D.items[c];
+    if (q && !(it.fr.toLowerCase().includes(q) || it.en.toLowerCase().includes(q))) continue;
+    (groups[it.cat] ||= []).push(c);
+  }
+  let h = "";
+  for (const g of D.cats) {
+    const list = groups[g];
+    if (!list) continue;
+    list.sort((a, b) => name(a).localeCompare(name(b), "fr"));
+    h += `<details class="cat-group" ${q || !(g === "Autres" || g.startsWith("FICSMAS")) ? "open" : ""}><summary>${esc(g)} <span class="num">${list.length}</span></summary>` +
+      list.map((c) => `<div class="pickrow"><button class="pick${view === "item" && c === sel ? " on" : ""}" data-pick="${c}">${icon(c, "sm")}<span>${esc(name(c))}</span></button>${D.std[c] ? `<button class="padd" type="button" data-quickadd="${c}" data-tip="Ajouter à mon usine (1/min)" aria-label="Ajouter ${esc(name(c))} à mon usine, 1 par minute"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M8 2.5v11M2.5 8h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>` : ""}</div>`).join("") +
+      `</details>`;
+  }
+  document.getElementById("catlist").innerHTML = h || `<p class="empty" style="padding:10px">Aucune pièce ne correspond.</p>`;
+}
+
+/* ---------- formatting ---------- */
+function machinesTxt(n, m) {
+  const whole = Math.ceil(n - 1e-6);
+  let sub = "";
+  if (whole > 0 && Math.abs(n - Math.round(n)) > 1e-4) {
+    if (whole === 1) sub = `1 machine à ${fmt(n * 100)} %`;
+    else sub = `${whole} machines, dont 1 à ${fmt((n - Math.floor(n + 1e-6)) * 100)} %`;
+  }
+  return `<span class="mach"><span class="mline">${mIcon(m)}<span><span class="num">${fmt(n)}</span> × ${esc(mName(m))}</span></span>${sub ? `<small>${sub}</small>` : ""}</span>`;
+}
+const BELTS = [[60, "Mk.1"], [120, "Mk.2"], [270, "Mk.3"], [480, "Mk.4"], [780, "Mk.5"], [1200, "Mk.6"]];
+const PIPES = [[300, "Mk.1"], [600, "Mk.2"]];
+function transportTxt(c, r) {
+  const fl = D.items[c].fl, list = fl ? PIPES : BELTS, top = list[list.length - 1];
+  const fit = list.find(([cap]) => r <= cap + EPS);
+  if (fit) return `1 ${fl ? "tuyau" : "tapis"} ${fit[1]}`;
+  return `${Math.ceil(r / top[0] - EPS)} ${fl ? "tuyaux" : "tapis"} ${top[1]}`;
+}
+function recipeLabel(c, r) {
+  if (!r) return { tag: "", name: D.items[c].raw ? "Extraction (ressource brute)" : D.std[c] ? "Fourni de l'extérieur" : "Entrée externe", m: null };
+  const R = D.recipes[r];
+  return { tag: R.alt ? "alt" : r === D.std[c] ? "std" : "", name: R.fr.replace(/\s*\(alternative\)\s*$/i, ""), m: R.m };
+}
+function recipeValues(c) {
+  const opts = D.opts[c] || [], std = D.std[c], raw = D.items[c].raw;
+  return (raw || !std ? [""] : []).concat(opts, !raw && std ? [""] : []);
+}
+function recipeSelect(c, id) {
+  if (!(D.opts[c] || []).length) return "";
+  const cur = recipeOf(c) || "", L = recipeLabel(c, cur);
+  return `<button type="button" class="rpick${L.tag === "alt" ? " alt" : ""}" id="${id}" data-rpick="${c}" aria-haspopup="listbox" aria-expanded="false" aria-label="Recette pour ${esc(name(c))} : ${esc(L.name)}">${L.m ? mIcon(L.m) : icon(c, "sm")}${L.tag === "alt" ? '<span class="tag alt">Alt.</span>' : ""}<span class="rp-txt">${esc(L.name)}</span><span class="rp-chev" aria-hidden="true">▾</span></button>`;
+}
+function optionHtml(c, r, cur, idx) {
+  const L = recipeLabel(c, r);
+  let body;
+  if (r) {
+    const R = D.recipes[r], f = 60 / R.t;
+    const it = ([x, a], main) => `<span class="ro-it${main === false ? " byp" : ""}">${icon(x, "sm")}<span><span class="num">${fmt(a * f)}${unit(x)}</span> ${esc(name(x))}</span></span>`;
+    body = `<div class="ro-mach">${mIcon(R.m)}<span>${esc(mName(R.m))} · par machine et par minute</span></div>
+      <div class="ro-flow"><div class="ro-col">${R.i.map((e) => it(e)).join("")}</div><span class="ro-arrow" aria-hidden="true">→</span><div class="ro-col">${R.o.map((e) => it(e, e[0] === c)).join("")}</div></div>`;
+  } else body = `<div class="ro-mach"><span>${D.items[c].raw ? "Ressource à amener, aucune machine." : "Arrive de l'extérieur, non calculée."}</span></div>`;
+  const tag = L.tag === "std" ? '<span class="tag std">Standard</span>' : L.tag === "alt" ? '<span class="tag alt">Alt.</span>' : "";
+  return `<div class="ropt" role="option" id="ro-${idx}" data-val="${r}" aria-selected="${r === cur}" tabindex="-1"><div class="ro-name">${tag}<span>${esc(L.name)}</span>${r === cur ? '<span class="ro-cur">Utilisée</span>' : ""}</div>${body}</div>`;
+}
+/* custom listbox for recipes */
+const rmenu = document.createElement("div");
+rmenu.id = "rmenu"; rmenu.setAttribute("role", "listbox"); rmenu.hidden = true;
+document.body.appendChild(rmenu);
+let rmBtn = null;
+function openMenu(btn) {
+  hideTip();
+  const c = btn.dataset.rpick, cur = recipeOf(c) || "";
+  rmenu.innerHTML = recipeValues(c).map((r, i) => optionHtml(c, r, cur, i)).join("");
+  rmenu.setAttribute("aria-label", "Recettes pour " + name(c));
+  rmenu.hidden = false; rmBtn = btn; btn.setAttribute("aria-expanded", "true");
+  rmenu.style.maxHeight = ""; rmenu.scrollTop = 0;
+  placeMenu();
+  const sel0 = rmenu.querySelector('[aria-selected="true"]') || rmenu.querySelector(".ropt");
+  if (sel0) { sel0.focus({ preventScroll: true }); showOpt(sel0); }
+}
+function placeMenu() {
+  const btn = rmBtn;
+  const b = btn.getBoundingClientRect();
+  const w = Math.min(Math.max(b.width, 440), innerWidth - 16);
+  rmenu.style.width = w + "px";
+  const below = innerHeight - b.bottom - 12, above = b.top - 12;
+  const h = Math.min(rmenu.scrollHeight, Math.max(below, above), innerHeight * 0.7);
+  rmenu.style.maxHeight = h + "px";
+  rmenu.style.left = Math.max(8, Math.min(b.left, innerWidth - w - 8)) + "px";
+  rmenu.style.top = (below >= h || below >= above ? b.bottom + 6 : b.top - h - 6) + "px";
+}
+function showOpt(o) {   // scroll inside the menu only, never the page
+  if (o.offsetTop < rmenu.scrollTop) rmenu.scrollTop = o.offsetTop - 6;
+  else if (o.offsetTop + o.offsetHeight > rmenu.scrollTop + rmenu.clientHeight) rmenu.scrollTop = o.offsetTop + o.offsetHeight - rmenu.clientHeight + 6;
+}
+function closeMenu(focusBtn) {
+  if (rmenu.hidden) return;
+  rmenu.hidden = true;
+  if (rmBtn) { rmBtn.setAttribute("aria-expanded", "false"); if (focusBtn) rmBtn.focus(); }
+  rmBtn = null;
+}
+function chooseRecipe(c, val, btnId) {
+  const def = D.items[c].raw ? "" : (D.std[c] || "");
+  if (val === def) delete choice[c]; else choice[c] = val;
+  saveChoice();
+  closeMenu(false);
+  render();
+  const again = document.getElementById(btnId); if (again) again.focus();
+}
+rmenu.addEventListener("click", (e) => {
+  const o = e.target.closest(".ropt");
+  if (o && rmBtn) chooseRecipe(rmBtn.dataset.rpick, o.dataset.val, rmBtn.id);
+});
+rmenu.addEventListener("keydown", (e) => {
+  const opts = [...rmenu.querySelectorAll(".ropt")];
+  const i = opts.indexOf(document.activeElement);
+  const go = (j) => { const o = opts[Math.max(0, Math.min(opts.length - 1, j))]; if (o) { o.focus({ preventScroll: true }); showOpt(o); } };
+  if (e.key === "ArrowDown") { e.preventDefault(); go(i + 1); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); go(i - 1); }
+  else if (e.key === "Home") { e.preventDefault(); go(0); }
+  else if (e.key === "End") { e.preventDefault(); go(opts.length - 1); }
+  else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); if (opts[i] && rmBtn) chooseRecipe(rmBtn.dataset.rpick, opts[i].dataset.val, rmBtn.id); }
+  else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeMenu(true); }
+  else if (e.key === "Tab") closeMenu(true);
+});
+document.addEventListener("keydown", (e) => {
+  const b = e.target.closest && e.target.closest("[data-rpick]");
+  if (b && (e.key === "ArrowDown" || e.key === "ArrowUp")) { e.preventDefault(); openMenu(b); }
+});
+document.addEventListener("pointerdown", (e) => {
+  if (!rmenu.hidden && !rmenu.contains(e.target) && !(e.target.closest && e.target.closest("[data-rpick]") === rmBtn)) closeMenu(false);
+}, true);
+document.addEventListener("scroll", (e) => {
+  if (rmenu.hidden || rmenu.contains(e.target) || !rmBtn) return;
+  const b = rmBtn.getBoundingClientRect();
+  if (!rmBtn.isConnected || b.bottom < 0 || b.top > innerHeight) closeMenu(false); else placeMenu();   // follow the button
+}, true);
+window.addEventListener("resize", () => closeMenu(false));
+
+function choiceNote() {
+  const k = Object.keys(choice);
+  if (!k.length) return "";
+  const s = k.length > 1 ? "s" : "";
+  return `<div class="choices"><div class="choices-head"><p class="note">${k.length} recette${s} modifiée${s} :</p><button class="btn" data-reset="1">Revenir aux recettes standard</button></div><div class="chips">` +
+    k.map((x) => {
+      const R = choice[x] ? D.recipes[choice[x]] : null;
+      return `<span class="chip cchip">${icon(x, "sm")}<button class="link" data-pick="${x}">${esc(name(x))}</button>${R && R.alt ? ' <span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>' : ""}<button class="cx" type="button" data-unchoose="${x}" aria-label="Revenir à la recette standard pour ${esc(name(x))}">×</button></span>`;
+    }).join("") + `</div></div>`;
+}
+
+/* ---------- shared result blocks ---------- */
+function resultSections(P, targets) {
+  const rawK = Object.keys(P.raw).sort((a, b) => P.raw[b] - P.raw[a]);
+  const steps = Math.max(0, ...targets.map((t) => (recipeOf(t.c) ? lvlOf(t.c) + 1 : 0)));
+  let h = `<section><div class="stats">
+      <div class="stat"><b>${P.nMach}</b><span>machines au total</span></div>
+      <div class="stat"><b>${fmt(P.mw)}</b><span>MW à 100 %</span></div>
+      <div class="stat"><b>${steps}</b><span>étapes de production</span></div>
+      <div class="stat"><b>${rawK.length}</b><span>entrées brutes</span></div>
+    </div></section>`;
+  const lg = rawK.length && view === "factory" ? logistics(rawK.map((k) => ({ c: k, rate: P.raw[k] }))) : null;
+  h += `<section><div class="sec-head"><h3 style="margin:0">Ressources à amener</h3>${rawK.length && view === "factory" ? `<button class="btn" data-view="transport" data-tsrc="factory">Transport : tapis, train, drones</button>` : ""}</div>` + (rawK.length ? `<div class="raws">` +
+    rawK.map((k) => `<div class="raw">${icon(k)}<div><button class="link" data-pick="${k}">${esc(name(k))}</button><b>${fmt(P.raw[k])}${unit(k)} / min</b><small>${viaTxt(k, P.raw[k])}${D.items[k].raw ? "" : " · entrée non calculée"}</small></div></div>`).join("") +
+    `</div>` : `<p class="empty">Aucune.</p>`) +
+    (lg && (lg.trainW || lg.drones) ? `<p class="note">Logistique choisie : ${lg.summary} · <span class="num">${fmt(lg.mw)}</span> MW pour les gares, quais et héliports (en plus des machines).</p>` : "") +
+    (P.converged ? "" : `<p class="note"><span class="tag loop">Boucle</span> Les recettes choisies forment une boucle qui ne se stabilise pas : les quantités sont indicatives.</p>`) + `</section>`;
+  const rec = Object.keys(P.recovered), sur = Object.keys(P.surplus);
+  if (rec.length || sur.length) {
+    h += `<section><h3 style="margin-bottom:10px">Sous-produits</h3>`;
+    if (rec.length) h += `<p class="note" style="margin:0 0 6px">Récupérés et réutilisés dans la chaîne (déjà déduits des besoins) :</p><div class="chips">` +
+      rec.map((k) => `<button class="chip" data-pick="${k}">${icon(k, "sm")}${esc(name(k))} <span class="num">${fmt(P.recovered[k])}${unit(k)}/min</span></button>`).join("") + `</div>`;
+    if (sur.length) h += `<p class="note" style="margin:${rec.length ? 12 : 0}px 0 6px">En surplus, à évacuer ou stocker :</p><div class="chips">` +
+      sur.map((k) => `<button class="chip" data-pick="${k}">${icon(k, "sm")}${esc(name(k))} <span class="num">+${fmt(P.surplus[k])}${unit(k)}/min</span></button>`).join("") + `</div>`;
+    h += `</section>`;
+  }
+  return h;
+}
+
+let lastP = null;
+function surplusOf(P, k) {   // surplus by-products attributable to the machines making k
+  const m = P.mach[k];
+  if (!m) return [];
+  const R = D.recipes[m.r], out = [];
+  for (const [b, a] of R.o) {
+    if (b === k || !P.surplus[b]) continue;
+    const amt = a * 60 / R.t * m.n;
+    out.push([b, P.surplus[b] * amt / P.supply[b]]);
+  }
+  return out.filter(([, v]) => v > EPS);
+}
+function stepsHtml(P, targets) {
+  lastP = P;
+  const tset = new Set(targets.map((t) => t.c));
+  const rows = Object.keys(P.mach).filter((k) => P.mach[k].n > EPS);
+  for (const t of targets) if (!P.mach[t.c] && recipeOf(t.c) && P.recovered[t.c]) rows.push(t.c);
+  rows.sort((a, b) => lvlOf(b) - lvlOf(a) || name(a).localeCompare(name(b), "fr"));
+  if (!rows.length) return `<p class="empty">Rien à fabriquer.</p>`;
+  let h = `<div class="tbl"><table><thead><tr><th>Pièce</th><th class="r">Débit</th><th>Machines</th><th class="r">MW</th><th>Recette</th></tr></thead><tbody>`;
+  let cur = null;
+  for (const k of rows) {
+    const L = lvlOf(k) + 1;
+    if (L !== cur) { cur = L; h += `<tr class="step-row"><td colspan="5">Étape ${L}</td></tr>`; }
+    if (!P.mach[k]) {
+      h += `<tr id="row-${k}"><td><div class="it">${icon(k, "sm")}<button class="link" data-pick="${k}">${esc(name(k))}</button> <span class="tag tgt" data-tip="Pièce demandée dans votre usine">Objectif</span></div></td>
+        <td class="r num">0${unit(k)}/min<small class="sub">+ ${fmt(P.recovered[k])} récupérés</small></td><td><span class="empty">Aucune : entièrement couvert par des sous-produits</span></td><td class="r num">0</td><td>${recipeSelect(k, "rs-" + k)}</td></tr>`;
+      continue;
+    }
+    const { r, n } = P.mach[k], R = D.recipes[r];
+    const q = n * perMin(r, k, "o");
+    const rec = P.recovered[k];
+    const sur = surplusOf(P, k);
+    const isOpen = openRows.has(k);
+    h += `<tr id="row-${k}" class="${isOpen ? "xopen" : ""}"><td><div class="it"><button class="xp" data-xp="${k}" aria-expanded="${isOpen}" aria-label="${isOpen ? "Replier" : "Déplier"} le détail de ${esc(name(k))}"><span aria-hidden="true">▸</span></button>${icon(k, "sm")}<button class="link" data-pick="${k}">${esc(name(k))}</button>${tset.has(k) ? ' <span class="tag tgt" data-tip="Pièce demandée dans votre usine">Objectif</span>' : ""}${R.alt ? ' <span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>' : ""}</div></td>
+      <td class="r num">${fmt(q)}${unit(k)}/min${rec ? `<small class="sub" data-tip="En plus de cette production : quantité fournie par des sous-produits (détail en dépliant la ligne)">+ ${fmt(rec)} récupérés</small>` : ""}${sur.map(([b, v]) => `<small class="sur" data-tipitem="${b}">+ ${fmt(v)}${unit(b)} ${esc(name(b))} en surplus</small>`).join("")}</td><td>${machinesTxt(n, R.m)}</td><td class="r num">${fmt(n * R.mw)}</td>
+      <td>${recipeSelect(k, "rs-" + k)}</td></tr>`;
+    if (isOpen) h += `<tr class="xrow"><td colspan="5">${rowDetail(P, k, q)}</td></tr>`;
+  }
+  return h + `</tbody></table></div><p class="note">De la pièce finale (en haut) vers les ressources brutes. Le triangle à gauche d'une ligne déplie sa chaîne de fabrication et sa destination ; un clic sur une destination ouvre l'étape correspondante. Changer une recette ici l'applique partout où cette pièce apparaît.</p>`;
+}
+function rowDetail(P, k, q) {
+  const fl = P.flows[k] || {};
+  const dest = Object.keys(fl).sort((a, b) => fl[b] - fl[a]);
+  const sur = surplusOf(P, k);
+  let h = `<div class="xbox"><div class="xcol"><div class="eyebrow">Fabrication de ${fmt(q)}${unit(k)}/min</div><div class="tree">${treeKids(k, q, 0, [k])}</div></div>`;
+  h += `<div class="xcol"><div class="eyebrow">Destination</div><div class="chips" style="margin-top:6px">` +
+    dest.map((d) => d === "__goal"
+      ? `<span class="chip static"><span class="tag tgt">Objectif</span> <span class="num">${fmt(fl[d])}${unit(k)}/min</span></span>`
+      : `<button class="chip" data-goto="${d}" data-tipitem="${d}">${icon(d, "sm")}${esc(name(d))} <span class="num">${fmt(fl[d])}${unit(k)}/min</span></button>`).join("") +
+    `</div>${P.recovered[k] ? `<p class="note">Consommé au total : ${fmt(P.demand[k])}${unit(k)}/min, dont ${fmt(P.recovered[k])}${unit(k)}/min récupérés en sous-produit de ${recFrom(P, k, P.recovered[k])}</p>` : ""}` +
+    (sur.length ? `<div class="eyebrow" style="margin-top:14px">Surplus à évacuer</div><div class="chips" style="margin-top:6px">` +
+      sur.map(([b, v]) => `<span class="chip static" data-tipitem="${b}">${icon(b, "sm")}${esc(name(b))} <span class="num">+${fmt(v)}${unit(b)}/min</span></span>`).join("") + `</div>` : "") +
+    `</div></div>`;
+  return h;
+}
+
+/* Trees take by-products into account: each node shows what it consumes, the part covered by
+   recovered by-products, and only the remainder is produced (or brought in). */
+function recFrom(P, k, amount) {      // by-product sources for a recovered amount, as links to their step
+  const by = (P.supplyBy || {})[k] || {}, tot = P.supply[k] || 0;
+  return Object.keys(by).sort((a, b) => by[b] - by[a]).map((src) =>
+    `<button class="srcl" data-goto="${src}" data-tipitem="${src}">${icon(src, "sm")}${esc(name(src))}${Object.keys(by).length > 1 ? ` <span class="num">${fmt(amount * by[src] / tot)}${unit(k)}</span>` : ""}</button>`).join(" ");
+}
+function netSplit(k, q) {
+  const P = lastP;
+  const dem = P && P.demand[k] ? P.demand[k] : 0;
+  if (!dem) return { made: q, rec: 0 };
+  const rec = Math.min(q, q * (P.recovered[k] || 0) / dem);
+  return { made: Math.max(0, q - rec), rec };
+}
+function treeNode(k, q, depth, path) {
+  const r = recipeOf(k);
+  const { made, rec } = netSplit(k, q);
+  const recTag = rec > EPS ? `<span class="recl"><span class="tag ok" data-tip="Partie couverte par un sous-produit d'une autre étape de la chaîne">dont ${fmt(rec)}${unit(k)} récupérés</span><span class="from">sous-produit de</span>${recFrom(lastP, k, rec)}</span>` : "";
+  const lab = `${icon(k, "sm")}<span class="num q" data-tip="${rec > EPS ? "Quantité consommée au total, part récupérée comprise" : "Quantité consommée"}">${fmt(q)}${unit(k)}/min</span><button class="link" data-pick="${k}">${esc(name(k))}</button>${recTag}`;
+  if (!r) return `<div class="leaf">${lab}<span class="tag raw" data-tip="${D.items[k].raw ? "Ressource extraite, à amener à l'usine" : "Pièce fournie de l'extérieur, non calculée"}">${D.items[k].raw ? "brut" : "entrée"}</span>${rec > EPS && made > EPS ? `<span class="rest">reste <span class="num">${fmt(made)}${unit(k)}/min</span> à amener</span>` : rec > EPS ? `<span class="rest">rien à amener</span>` : ""}</div>`;
+  if (path.includes(k)) return `<div class="leaf">${lab}<span class="tag loop" data-tip="Cette pièce se consomme elle-même plus haut dans la chaîne : l'arbre s'arrête ici.">boucle</span></div>`;
+  if (made <= EPS) return `<div class="leaf">${lab}<span class="rest">entièrement couvert, rien à fabriquer</span></div>`;
+  const R = D.recipes[r], n = made / perMin(r, k, "o"), open = depth < 2;
+  return `<details data-k="${k}" data-q="${made}" data-d="${depth}" data-p="${path.concat(k).join(",")}"${open ? " open" : ""}><summary><span class="row">${lab}<span class="num q">·</span>${mIcon(R.m)}<span class="num q">${fmt(n)} × ${esc(mName(R.m))}</span>${R.alt ? '<span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>' : ""}${rec > EPS ? `<span class="rest">pour les <span class="num">${fmt(made)}${unit(k)}/min</span> restants</span>` : ""}</span></summary>${open ? treeKids(k, made, depth, path.concat(k)) : ""}</details>`;
+}
+function treeKids(k, q, depth, path) {
+  const r = recipeOf(k), R = D.recipes[r], n = q / perMin(r, k, "o");
+  return R.i.map(([i, a]) => treeNode(i, a * 60 / R.t * n, depth + 1, path)).join("");
+}
+function treesHtml(targets, P) {
+  lastP = P;
+  return targets.map((t) => `<div class="tree">${treeNode(t.c, t.rate, 0, [])}</div>`).join(`<hr class="sep">`) +
+    `<p class="note">Les sous-produits récupérés sont déduits : une ligne indique ce qui est consommé et la part couverte par des sous-produits ; seul le reste est fabriqué. Dépliez une ligne pour remonter la chaîne.</p>`;
+}
+
+function filterBar(kind) {
+  return `<div class="ufilters">
+    <div class="sfield"><input id="uq" type="search" placeholder="Filtrer (ex. turbo)" autocomplete="off" value="${esc(uF.q)}" aria-label="Filtrer la liste"><button class="sclear" type="button" data-clear-for="uq" aria-label="Effacer le filtre">×</button></div>
+    <select id="ucat" aria-label="Catégorie"><option value="">Toutes les catégories</option>${D.cats.map((g) => `<option${g === uF.cat ? " selected" : ""}>${esc(g)}</option>`).join("")}</select>
+  </div>
+  <div class="uchecks">
+    ${kind === "uses" ? `<label class="ucheck"><input type="checkbox" id="ualt"${uF.alt ? " checked" : ""}> Inclure les recettes alternatives</label>` : ""}
+    <label class="ucheck"><input type="checkbox" id="uev"${uF.ev ? " checked" : ""}> Inclure les éléments FICSMAS</label>
+  </div><div id="ulist">${kind === "uses" ? usesList(sel) : withoutList(sel)}</div>`;
+}
+const uMatch = (k) => {
+  const it = D.items[k], q = uF.q.trim().toLowerCase();
+  if (it.ev && !uF.ev && uF.cat !== it.cat) return false;   // FICSMAS hidden unless asked for
+  return (!uF.cat || it.cat === uF.cat) && (!q || it.fr.toLowerCase().includes(q) || it.en.toLowerCase().includes(q));
+};
+const chipOf = (p, extra = "") => `<button class="chip" data-pick="${p}"${extra}>${icon(p, "sm")}${esc(name(p))}</button>`;
+function byStep(list, empty) {
+  const g = {};
+  for (const k of list) (g[recipeOf(k) ? lvlOf(k) + 1 : 0] ||= []).push(k);
+  const steps = Object.keys(g).map(Number).sort((a, b) => a - b);
+  return steps.length ? steps.map((s) => `<div class="dep-step"><div>${s}</div><div class="chips">` +
+    g[s].sort((a, b) => name(a).localeCompare(name(b), "fr")).map((p) => chipOf(p)).join("") + `</div></div>`).join("") : `<p class="empty">${empty}</p>`;
+}
+function usesList(c) {
+  const direct = Object.keys(D.recipes).filter((r) => D.recipes[r].i.some(([i]) => i === c) && (uF.alt || !D.recipes[r].alt));
+  const prods = [...new Set(direct.map((r) => D.recipes[r].o[0][0]))].filter(uMatch).sort((a, b) => name(a).localeCompare(name(b), "fr"));
+  let h = `<h3 class="uh">Directement · ${prods.length} pièce${prods.length > 1 ? "s" : ""}</h3>`;
+  h += prods.length ? `<div class="chips">` + prods.map((p) => {
+    const rs = direct.filter((r) => D.recipes[r].o[0][0] === p);
+    const alt = rs.every((r) => D.recipes[r].alt);
+    return `<button class="chip" data-pick="${p}" data-tip-extra="${esc((rs.length > 1 ? "Recettes : " : "Recette : ") + rs.map((r) => (D.recipes[r].alt ? "Alt. " : "") + D.recipes[r].fr.replace(/\s*\(alternative\)\s*$/i, "")).join(" · "))}">${icon(p, "sm")}${esc(name(p))}${alt ? ' <span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>' : ""}</button>`;
+  }).join("") + `</div>` : `<p class="empty">Aucune pièce ne correspond.</p>`;
+  const dep = Object.keys(D.items).filter((k) => k !== c && recipeOf(k) && needs(k, c) && uMatch(k));
+  h += `<h3 class="uh" style="margin-top:20px">Tout ce qui en dépend, avec vos recettes actuelles · ${dep.length}</h3>`;
+  h += byStep(dep, "Aucune pièce ne correspond.");
+  return h + `<p class="note">Le chiffre à gauche est l'étape de production de la pièce, comptée depuis les ressources brutes.</p>`;
+}
+function withoutList(c) {
+  const list = Object.keys(D.items).filter((k) => k !== c && recipeOf(k) && !needs(k, c) && uMatch(k));
+  return `<h3 class="uh">Fabriqué sans ${esc(name(c))}, avec vos recettes actuelles · ${list.length}</h3>` + byStep(list, "Aucune pièce ne correspond.") +
+    `<p class="note">Pièces dont la chaîne complète n'utilise pas cette pièce. Changer une recette alternative peut faire entrer ou sortir une pièce de cette liste.</p>`;
+}
+
+function tabsCard(list, body) {
+  if (!list.find((t) => t[0] === tab)) tab = list[0][0];
+  return `<div class="card"><div class="tabs" role="tablist">` +
+    list.map(([k, l]) => `<button class="tab" role="tab" id="tab-${k}" aria-selected="${k === tab}" data-tab="${k}">${l}</button>`).join("") +
+    `</div><section id="tabbody">${body(tab)}</section></div>`;
+}
+
+/* ---------- views ---------- */
+function modeBar() {
+  const n = factory.length;
+  return `<div class="modes" role="tablist" aria-label="Vue">
+    <button class="mode" role="tab" aria-selected="${view === "item"}" data-view="item">Fiche pièce${sel ? ` · ${esc(name(sel))}` : ""}</button>
+    <button class="mode" role="tab" aria-selected="${view === "factory"}" data-view="factory">Mon usine <span class="count">${n}</span></button>
+    <button class="mode" role="tab" aria-selected="${view === "transport"}" data-view="transport">Transport</button>
+  </div>`;
+}
+
+function qChips(c, r, list) {           // ingredients / by-products with the amount for 1 part or for 1 machine
+  const R = D.recipes[r], main = R.o.find(([o]) => o === c)[1];
+  return list.map(([x, a]) => {
+    const q = qMode === "unit" ? a / main : a * 60 / R.t;
+    return `<button class="chip" data-pick="${x}">${icon(x, "sm")}<span class="num qn">${fmt(q)}${unit(x)}${qMode === "unit" ? "" : "/min"}</span>${esc(name(x))}</button>`;
+  }).join("");
+}
+const outTxt = (c, r) => { const R = D.recipes[r]; return `${fmt(R.o.find(([o]) => o === c)[1] * 60 / R.t)}${unit(c)}/min`; };
+const outOf = (c, r) => { const R = D.recipes[r]; return R.o.find(([o]) => o === c)[1] * 60 / R.t; };
+function speedTag(c, r) {             // machine output compared with the standard recipe
+  const std = D.std[c];
+  if (!std || std === r) return "";
+  const k = outOf(c, r) / outOf(c, std);
+  if (Math.abs(k - 1) < 0.005) return ` <span class="tag" data-tip="Une machine produit autant qu'avec la recette standard">= standard</span>`;
+  const up = k > 1;
+  return ` <span class="tag ${up ? "ok" : "loop"}" data-tip="Une machine produit ${fmt(k)} fois ${up ? "plus" : "moins"} qu'avec la recette standard (${fmt(outOf(c, std))}${unit(c)}/min)">×${fmt(k)} par machine</span>`;
+}
+function rawLine(c, r) {              // raw resources for 1 part (or 1 machine), sub-parts in standard recipes
+  const prev = choice; choice = { [c]: r }; lvlMemo = {}; needMemo = {};
+  const q = qMode === "unit" ? 1 : outOf(c, r);
+  const P = plan([{ c, rate: q }]);
+  choice = prev; lvlMemo = {}; needMemo = {};
+  const raws = Object.keys(P.raw).sort((a, b) => P.raw[b] - P.raw[a]);
+  if (!raws.length) return "";
+  return `<div class="rc-raw"><span>${qMode === "unit" ? "Ressources brutes au total :" : "Ressources brutes au total, par minute :"}</span><div class="chips">${raws.map((x) =>
+    `<button class="chip" data-pick="${x}">${icon(x, "sm")}<span class="num qn">${fmt(P.raw[x])}${unit(x)}${qMode === "unit" ? "" : "/min"}</span>${esc(name(x))}</button>`).join("")}</div></div>`;
+}
+function recipeCard(c, r) {
+  const R = D.recipes[r], byp = R.o.filter(([o]) => o !== c), main = R.o[0][0] === c;
+  const tag = R.alt ? '<span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>'
+    : r === D.std[c] ? '<span class="tag std">Standard</span>' : !main ? '<span class="tag raw">Sous-produit</span>' : "";
+  return `<div class="rcard${R.alt ? " alt" : ""}">
+    <div class="rc-head">${tag}<b>${esc(recipeLabel(c, r).name)}</b><span class="rc-mach">${mIcon(R.m)}${esc(mName(R.m))} · 1 machine produit <span class="num">${outTxt(c, r)}</span>${speedTag(c, r)}</span></div>
+    <div class="rc-flow"><div class="chips">${qChips(c, r, R.i)}</div>${byp.length ? `<div class="rc-byp"><span>Produit aussi :</span><div class="chips">${qChips(c, r, byp)}</div></div>` : ""}${rawLine(c, r)}</div>
+  </div>`;
+}
+function renderItem() {
+  const c = sel, it = D.items[c], r = D.std[c];
+  const others = (D.opts[c] || []).filter((x) => x !== r);
+  let h = modeBar() + `<div class="card">
+    <section class="head">${icon(c, "lg")}
+      <div><div class="eyebrow">${esc(it.cat)}${r ? ` · ${lvlOf(c) + 1} étape${lvlOf(c) ? "s" : ""} depuis les ressources brutes` : it.raw ? " · ressource brute" : ""}</div>
+      <h2>${esc(it.fr)}</h2><div class="en">${esc(it.en)}</div></div>
+      ${r ? `<button class="btn primary" data-quickadd="${c}" data-tip="Ajoute 1/min ; si la pièce y est déjà, son débit augmente de 1">+ Ajouter à mon usine</button>` : ""}
+    </section>
+    <section><div class="sec-head"><h3 class="uh" style="margin:0">Fabriqué dans</h3>${(D.opts[c] || []).length ? `<div class="seg" role="group" aria-label="Quantités affichées">
+        <button class="segb" data-qmode="unit" aria-pressed="${qMode === "unit"}">Pour 1 ${D.items[c].fl ? "m³" : "pièce"}</button><button class="segb" data-qmode="machine" aria-pressed="${qMode === "machine"}">Pour 1 machine, par minute</button></div>` : ""}</div>`;
+  if (r) {
+    const R = D.recipes[r];
+    const byp = R.o.filter(([o]) => o !== c);
+    h += `<div class="made">${mIcon(R.m).replace('ico sm', 'ico')}<div><b>${esc(mName(R.m))}</b><div class="note" style="margin:0">Recette standard${R.fr !== it.fr ? ` « ${esc(R.fr)} »` : ""} · 1 machine produit <span class="num">${outTxt(c, r)}</span></div></div></div>
+      <div class="chips">${qChips(c, r, R.i)}</div>
+      ${byp.length ? `<div class="rc-byp" style="margin-top:8px"><span>Produit aussi :</span><div class="chips">${qChips(c, r, byp)}</div></div>` : ""}
+      <div style="margin-top:8px">${rawLine(c, r)}</div>`;
+  } else if (it.raw) h += `<p class="note" style="margin:0">Ressource brute : elle s'extrait d'un gisement et ne se fabrique dans aucune machine.</p>`;
+  else h += `<p class="note" style="margin:0">Aucune recette standard : ${others.length ? "elle ne s'obtient qu'avec les recettes ci-dessous." : "elle ne se fabrique pas en machine."}</p>`;
+  h += `</section>`;
+  if (others.length) h += `<section><details class="others"${r && !othersOpen ? "" : " open"}><summary><h3 class="uh" style="display:inline">Autres recettes · ${others.length}</h3>${others.some((x) => D.recipes[x].alt) ? ' <span class="tag alt" data-tip="Contient des recettes alternatives, débloquées avec un disque dur" style="vertical-align:4px;margin-left:6px">Alt.</span>' : ""}</summary><div class="rcards">${others.map((x) => recipeCard(c, x)).join("")}</div></details></section>`;
+  h += `</div>`;
+  tab = tabI;
+  const tabs = [["uses", "Utilisé dans"], ["without", "Sans cette pièce"]];
+  return h + tabsCard(tabs, (t) => filterBar(t));
+}
+function compoHtml(c) {                 // every part involved, standard recipes, no quantities
+  const seen = new Set();
+  const walk = (k, path) => {
+    const r = recipeOf(k);
+    if (!r || path.includes(k)) return;
+    for (const [i] of D.recipes[r].i) if (!seen.has(i)) { seen.add(i); walk(i, path.concat(k)); }
+  };
+  walk(c, []);
+  seen.delete(c);
+  const raws = [...seen].filter((k) => !recipeOf(k)).sort((a, b) => name(a).localeCompare(name(b), "fr"));
+  const parts = [...seen].filter((k) => recipeOf(k));
+  let h = `<h3 class="uh">Ressources brutes · ${raws.length}</h3><div class="chips">${raws.map((k) => chipOf(k)).join("")}</div>`;
+  h += `<h3 class="uh" style="margin-top:20px">Pièces intermédiaires · ${parts.length}</h3>`;
+  h += parts.length ? byStep(parts, "") : `<p class="empty">Aucune : elle se fabrique directement à partir des ressources brutes.</p>`;
+  return h + `<p class="note">Tout ce qui entre dans sa fabrication avec les recettes standard, rangé par étape depuis les ressources brutes. Les quantités se calculent dans Mon usine.</p>`;
+}
+
+function renderFactory() {
+  let h = modeBar();
+  if (!factory.length) {
+    return h + `<div class="card"><section>
+      <h2 style="font-size:34px">Mon usine</h2>
+      <p class="lede">Votre usine est vide. Ajoutez les pièces que vous voulez produire avec le bouton ci-dessous, ou avec le « + » qui apparaît au survol d'une pièce dans le catalogue. Les pièces intermédiaires communes sont regroupées et les sous-produits réutilisés.</p>
+      <button class="btn primary addgoal" data-addline="1" aria-haspopup="listbox" style="margin-top:14px">+ Ajouter une pièce</button>
+    </section></div>`;
+  }
+  h += `<div class="card"><section class="head"><div><div class="eyebrow">${factory.length} pièce${factory.length > 1 ? "s" : ""} demandée${factory.length > 1 ? "s" : ""}</div><h2>Mon usine</h2></div>
+      <button class="btn" data-clear="1">Vider l'usine</button></section>
+    <section><div class="goals">` +
+    factory.map((f, i) => `<div class="goal" id="goalrow-${f.c}">${icon(f.c)}<div class="g-name"><button class="link" data-pick="${f.c}">${esc(name(f.c))}</button></div>
+        <div class="g-recipe">${recipeSelect(f.c, "goal-r-" + f.c)}</div>
+        <label class="g-rate"><input type="text" inputmode="decimal" autocomplete="off" value="${fmtIn(f.rate)}" data-goal="${i}" id="goal-${f.c}" aria-label="Débit de ${esc(name(f.c))}"> <span class="num">${unit(f.c).trim() || ""} / min</span></label>
+        <button class="btn icon" data-remove="${i}" aria-label="Retirer ${esc(name(f.c))}">Retirer</button></div>`).join("") +
+    `</div><button class="btn addgoal" data-addline="1" aria-haspopup="listbox">+ Ajouter une pièce</button>${choiceNote()}</section>`;
+  const R = factoryResults();
+  return h + `<div id="res-a" class="contents">${R.a}</div></div><div id="res-b">${R.b}</div>`;
+}
+function factoryResults() {
+  const targets = factory.filter((f) => f.rate > 0), P = plan(targets);
+  tab = tabF;
+  return { a: resultSections(P, targets),
+           b: tabsCard([["steps", "Étapes et machines"], ["tree", "Arbres"]], (t) => (t === "steps" ? stepsHtml(P, targets) : treesHtml(targets, P))) };
+}
+/* Recompute results only, leaving the inputs being typed in untouched. */
+function updateResults() {
+  hideTip();
+  lvlMemo = {}; needMemo = {};
+  const a = document.getElementById("res-a"), b = document.getElementById("res-b");
+  if (view === "transport") return updateTransport();
+  if (!a || !b || view !== "factory") return render();
+  const R = factoryResults();
+  a.innerHTML = R.a; b.innerHTML = R.b;
+}
+
+function sanitizeField(el, val) {
+  if (val === el.value) return;
+  const removed = el.value.length - val.length;
+  const pos = Math.max(0, Math.min((el.selectionStart ?? val.length) - removed, val.length));
+  el.value = val;
+  try { el.setSelectionRange(pos, pos); } catch (er) {}
+}
+function sanitizeDec(el) {             // digits and one comma, at most 2 decimals ("." becomes ",")
+  let val = el.value.replace(/\./g, ",").replace(/[^\d,]/g, "");
+  const f = val.indexOf(",");
+  if (f !== -1) val = val.slice(0, f + 1) + val.slice(f + 1).replace(/,/g, "");
+  const m2 = val.match(/^(.*?,\d{2})\d+/);
+  if (m2) val = m2[1];
+  sanitizeField(el, val);
+}
+
+function render() {
+  hideTip(); closeMenu(false); if (typeof closePicker === "function") closePicker(false);
+  lvlMemo = {}; needMemo = {};
+  document.getElementById("sheet").innerHTML = view === "factory" ? renderFactory() : view === "transport" ? renderTransport() : renderItem();
+  flash = "";
+}
+
+/* ---------- interactions ---------- */
+function setHash(h) { try { if (location.hash !== "#" + h) history.replaceState(null, "", "#" + h); } catch (e) {} }
+function select(c) {
+  if (!D.items[c]) return;
+  sel = c; view = "item"; useChoices();
+  store.set("sp-sel", c); store.set("sp-view", view);
+  setHash(hashOf(c));
+  renderCatalogue(); render();
+  const on = document.querySelector(".pick.on"); if (on) on.scrollIntoView({ block: "nearest" });
+}
+function showTransport() {
+  view = "transport"; useChoices(); store.set("sp-view", view); setHash("transport");
+  renderCatalogue(); render();
+}
+function showFactory() {
+  view = "factory"; useChoices(); store.set("sp-view", view); setHash("usine");
+  renderCatalogue(); render();
+}
+const saveFactory = () => store.set("sp-factory", factory);
+function keepFocus(id, fn) {
+  const el = document.getElementById(id);
+  const pos = el && el.selectionStart;
+  fn();
+  const again = document.getElementById(id);
+  if (again) { again.focus(); try { if (pos != null) again.setSelectionRange(pos, pos); } catch (e) {} }
+}
+
+document.addEventListener("click", (e) => {
+  const v = e.target.closest("[data-view]");
+  if (v) {
+    if (v.dataset.tsrc) { T.src = v.dataset.tsrc; saveT(); }
+    v.dataset.view === "factory" ? showFactory() : v.dataset.view === "transport" ? showTransport() : sel && select(sel);
+    return;
+  }
+  const p = e.target.closest("[data-pick]");
+  if (p && !e.target.closest("select")) { select(p.dataset.pick); window.scrollTo({ top: document.getElementById("sheet").offsetTop - 12, behavior: "smooth" }); return; }
+  const rp = e.target.closest("[data-rpick]");
+  if (rp) { rmBtn === rp && !rmenu.hidden ? closeMenu(true) : openMenu(rp); return; }
+  const go = e.target.closest("[data-goto]");
+  if (go) {
+    const k = go.dataset.goto;
+    openRows.add(k);
+    if (!document.getElementById("row-" + k) && view === "factory" && tabF !== "steps") { tabF = "steps"; store.set("sp-tab-f", tabF); render(); }
+    else updateResults();
+    const row = document.getElementById("row-" + k);
+    if (row) {
+      row.scrollIntoView({ behavior: "smooth", block: "center" });
+      row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 1600);
+      const x = row.querySelector("[data-xp]"); if (x) x.focus({ preventScroll: true });
+    }
+    return;
+  }
+  const un = e.target.closest("[data-unchoose]");
+  if (un) { delete choice[un.dataset.unchoose]; saveChoice(); render(); return; }
+  const cl = e.target.closest("[data-clear-for]");
+  if (cl) {
+    const inp = document.getElementById(cl.dataset.clearFor);
+    if (inp) { inp.value = ""; inp.dispatchEvent(new Event("input", { bubbles: true })); inp.focus(); }
+    return;
+  }
+  const xp = e.target.closest("[data-xp]");
+  if (xp) { const k = xp.dataset.xp; openRows.has(k) ? openRows.delete(k) : openRows.add(k); updateResults(); const again = document.querySelector(`[data-xp="${k}"]`); if (again) again.focus(); return; }
+  const t = e.target.closest("[data-tab]");
+  if (t) {
+    tab = t.dataset.tab;
+    if (view === "factory") { tabF = tab; store.set("sp-tab-f", tab); } else { tabI = tab; store.set("sp-tab-i", tab); }
+    render(); return;
+  }
+  const qm = e.target.closest("[data-qmode]");
+  if (qm) { qMode = qm.dataset.qmode; store.set("sp-qmode", qMode); render(); return; }
+  const qa = e.target.closest("[data-quickadd]");
+  if (qa) { quickAdd(qa.dataset.quickadd); return; }
+  const al = e.target.closest("[data-addline]");
+  if (al) { ipBtn === al && !ipick.hidden ? closePicker(true) : openPicker(al); return; }
+  if (e.target.closest("[data-reset]")) { for (const k in choice) delete choice[k]; saveChoice(); render(); return; }
+  const rm = e.target.closest("[data-remove]");
+  if (rm) { factory.splice(+rm.dataset.remove, 1); pruneFactoryChoices(); saveFactory(); render(); return; }
+  if (e.target.closest("[data-clear]")) {
+    const n = factory.length, k = Object.keys(choiceF).length;
+    openModal({
+      title: "Vider l'usine ?",
+      body: `<p>${n > 1 ? `Les ${n} pièces` : "La pièce"} de votre usine${k ? (k > 1 ? ` et ses ${k} recettes modifiées` : " et sa recette modifiée") : ""} ${n > 1 || k ? "seront retirées" : "sera retirée"}. Cette action ne peut pas être annulée.</p>`,
+      inline: true,
+      actions: [{ label: "Vider l'usine", kind: "danger", run: () => { factory = []; for (const x in choiceF) delete choiceF[x]; store.set("sp-choice-f", choiceF); saveFactory(); render(); } }],
+    });
+    return;
+  }
+});
+function refreshUList() {
+  const l = document.getElementById("ulist");
+  if (l) { hideTip(); l.innerHTML = tab === "uses" ? usesList(sel) : withoutList(sel); }
+}
+document.addEventListener("change", (e) => {
+  if (e.target.id === "ucat") { uF.cat = e.target.value; refreshUList(); return; }
+  if (e.target.id === "ualt") { uF.alt = e.target.checked; refreshUList(); return; }
+  if (e.target.id === "uev") { uF.ev = e.target.checked; refreshUList(); return; }
+});
+document.addEventListener("input", (e) => {
+  if (e.target.id === "q") { renderCatalogue(); return; }
+  if (e.target.id === "uq") { uF.q = e.target.value; refreshUList(); return; }
+  if (e.target.id === "ipq") { document.getElementById("iplist").innerHTML = pickerList(e.target.value); return; }
+  if (e.target.dataset.time) { onTimeInput(e.target); return; }
+  if (e.target.dataset.trate != null || e.target.id === "tbatt") { onTransportNum(e.target); return; }
+  if (e.target.id === "tmaxw") {
+    const el = e.target; sanitizeField(el, el.value.replace(/\D/g, "").slice(0, 2));
+    let v = parseInt(el.value, 10);
+    el.classList.toggle("bad", !(v >= 1));
+    if (!(v >= 1)) return;
+    if (v > 50) { v = 50; el.value = "50"; }
+    T.maxW = v; saveT(); updateTransport(); return;
+  }
+  const isGoal = e.target.dataset.goal != null;
+  if (!isGoal) return;
+  // keep at most 2 digits after the separator
+  // French decimal separator: "." becomes "," while typing, caret kept in place
+  // digits and a single comma only, at most 2 decimals
+  sanitizeDec(e.target);
+  let v = parseNum(e.target.value);
+  e.target.classList.toggle("bad", v === null && e.target.value.trim() !== "");
+  if (v === null) return;
+  if (v > MAX_RATE) { v = MAX_RATE; e.target.value = fmtIn(MAX_RATE); }
+  factory[+e.target.dataset.goal].rate = v; saveFactory();
+  updateResults();
+});
+/* Never leave an objective empty: on leaving the field, restore a valid value. */
+document.addEventListener("focusout", (e) => {
+  const el = e.target;
+  if (el.dataset && el.dataset.goal != null) {
+    const f = factory[+el.dataset.goal];
+    if (f) { el.value = fmtIn(f.rate); el.classList.remove("bad"); }
+  }
+});
+document.addEventListener("toggle", (e) => {
+  const d = e.target;
+  if (d.classList && d.classList.contains("others")) othersOpen = d.open;
+  if (d.tagName === "DETAILS" && d.open && d.dataset.k && !d.querySelector(":scope > details, :scope > .leaf")) {
+    d.insertAdjacentHTML("beforeend", treeKids(d.dataset.k, +d.dataset.q, +d.dataset.d, d.dataset.p.split(",")));
+  }
+}, true);
+function fromHash() {
+  const h = location.hash.slice(1);
+  if (h === "usine" || h === "transport") return h;
+  return Object.keys(D.items).find((k) => hashOf(k) === h) || null;
+}
+window.addEventListener("hashchange", () => {
+  const t = fromHash();
+  if (t === "usine") { if (view !== "factory") showFactory(); }
+  else if (t === "transport") { if (view !== "transport") showTransport(); }
+  else if (t && (t !== sel || view !== "item")) select(t);
+});
+
+/* ---------- factory recipe choices ---------- */
+const hasKey = (o, k) => Object.prototype.hasOwnProperty.call(o, k);
+const effRecipe = (set, k) => (hasKey(set, k) ? set[k] || "" : D.std[k] || "");
+function usedWith(set, targets) {        // every item the targets need, computed with a given set of recipe choices
+  const prev = choice; choice = set; lvlMemo = {}; needMemo = {};
+  const P = plan(targets.filter((t) => t.rate > 0));
+  choice = prev; lvlMemo = {}; needMemo = {};
+  return new Set(Object.keys(P.demand));
+}
+const factoryUsed = (targets) => usedWith(choiceF, targets);
+function prunedChoices(set, targets) {   // keep only choices that the given goals actually use
+  const used = targets.length ? usedWith(set, targets) : new Set();
+  const out = {};
+  for (const k in set) if (used.has(k)) out[k] = set[k];
+  return out;
+}
+function pruneFactoryChoices() {
+  const p = prunedChoices(choiceF, factory);
+  for (const k in choiceF) delete choiceF[k];
+  Object.assign(choiceF, p);
+  store.set("sp-choice-f", choiceF);
+}
+function recipeName(k, r) { return recipeLabel(k, r).name + (r && D.recipes[r].alt ? " (alternative)" : r && r === D.std[k] ? " (standard)" : ""); }
+
+/* ---------- adding parts to the factory ---------- */
+function addGoal(c, amount) {
+  const f = factory.find((x) => x.c === c);
+  if (f) f.rate = clampRate(f.rate + amount); else factory.push({ c, rate: amount });
+  saveFactory();
+  return f ? `${esc(name(c))} passe à ${fmt(f.rate)}${unit(c)}/min dans votre usine.` : `Ajouté à votre usine : ${esc(name(c))}, ${fmt(amount)}${unit(c)}/min.`;
+}
+function flashGoal(c, focus) {
+  const row = document.getElementById("goalrow-" + c);
+  if (!row) return;
+  row.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  row.classList.add("flash"); setTimeout(() => row.classList.remove("flash"), 1600);
+  if (focus) { const i = document.getElementById("goal-" + c); if (i) { i.focus({ preventScroll: true }); i.select(); } }
+}
+function quickAdd(c) {
+  const msg = addGoal(c, 1);
+  if (view === "factory") { render(); flashGoal(c, false); }
+  else { const n = document.querySelector('.mode[data-view="factory"] .count'); if (n) n.textContent = factory.length; }
+  toast(msg + (view === "factory" ? "" : ' <button class="link" data-view="factory">Voir mon usine</button>'));
+}
+
+/* toast */
+const toastEl = document.createElement("div");
+toastEl.id = "toast"; toastEl.setAttribute("role", "status"); toastEl.hidden = true;
+document.body.appendChild(toastEl);
+let toastT = 0;
+function toast(html) {
+  toastEl.innerHTML = html; toastEl.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 3500);
+}
+toastEl.addEventListener("pointerenter", () => clearTimeout(toastT));
+toastEl.addEventListener("pointerleave", () => { toastT = setTimeout(() => { toastEl.hidden = true; }, 1500); });
+toastEl.addEventListener("click", (e) => { if (e.target.closest("[data-view]")) toastEl.hidden = true; });
+
+/* part picker for "+ Ajouter une pièce" */
+const ipick = document.createElement("div");
+ipick.id = "ipick"; ipick.hidden = true;
+document.body.appendChild(ipick);
+let ipBtn = null, ipMode = "f";
+function pickerList(q) {
+  q = q.trim().toLowerCase();
+  const groups = {};
+  for (const c in D.items) {
+    const it = D.items[c];
+    if (!D.std[c] && !(ipMode === "t" && it.raw)) continue;
+    if (q && !(it.fr.toLowerCase().includes(q) || it.en.toLowerCase().includes(q))) continue;
+    (groups[it.cat] ||= []).push(c);
+  }
+  let h = "";
+  for (const g of D.cats) {
+    if (!groups[g]) continue;
+    h += `<div class="ip-cat">${esc(g)}</div>` + groups[g].sort((a, b) => name(a).localeCompare(name(b), "fr")).map((c) => {
+      const f = (ipMode === "t" ? T.lines : factory).find((x) => x.c === c);
+      return `<button class="ipo" type="button" role="option" data-ipadd="${c}">${icon(c, "sm")}<span>${esc(name(c))}</span>${f ? `<small>déjà ${fmt(f.rate)}${unit(c)}/min</small>` : ""}</button>`;
+    }).join("");
+  }
+  return h || `<p class="empty" style="padding:8px">Aucune pièce ne correspond.</p>`;
+}
+function openPicker(btn) {
+  hideTip(); closeMenu(false);
+  ipBtn = btn; ipMode = btn.dataset.addline === "transport" ? "t" : "f"; btn.setAttribute("aria-expanded", "true");
+  ipick.innerHTML = `<div class="sfield"><input id="ipq" type="search" placeholder="Chercher une pièce à ajouter" autocomplete="off" aria-label="Chercher une pièce à ajouter"><button class="sclear" type="button" data-clear-for="ipq" aria-label="Effacer la recherche">×</button></div><div class="iplist" id="iplist" role="listbox" aria-label="Pièces">${pickerList("")}</div>`;
+  ipick.hidden = false;
+  if (ipMode === "t") document.getElementById("ipq").placeholder = "Chercher une ressource à transporter";
+  placePicker();
+  document.getElementById("ipq").focus({ preventScroll: true });
+}
+function placePicker() {
+  const b = ipBtn.getBoundingClientRect();
+  const w = Math.min(420, innerWidth - 16);
+  const below = innerHeight - b.bottom - 12, above = b.top - 12;
+  const h = Math.min(520, Math.max(below, above));
+  ipick.style.width = w + "px"; ipick.style.height = h + "px";
+  ipick.style.left = Math.max(8, Math.min(b.left, innerWidth - w - 8)) + "px";
+  ipick.style.top = (below >= Math.min(320, h) || below >= above ? b.bottom + 6 : b.top - h - 6) + "px";
+}
+function closePicker(focusBtn) {
+  if (ipick.hidden) return;
+  ipick.hidden = true; ipick.innerHTML = "";
+  if (ipBtn) { ipBtn.setAttribute("aria-expanded", "false"); if (focusBtn && ipBtn.isConnected) ipBtn.focus(); }
+  ipBtn = null;
+}
+ipick.addEventListener("click", (e) => {
+  const o = e.target.closest("[data-ipadd]");
+  if (!o) return;
+  const c = o.dataset.ipadd;
+  const mode = ipMode;
+  closePicker(false);
+  if (mode === "t") { addTransportLine(c); return; }
+  const msg = addGoal(c, 1);
+  render(); flashGoal(c, true); toast(msg);
+});
+ipick.addEventListener("keydown", (e) => {
+  const opts = [...ipick.querySelectorAll(".ipo")];
+  const i = opts.indexOf(document.activeElement);
+  const go = (j) => { const o = opts[Math.max(0, Math.min(opts.length - 1, j))]; if (o) { o.focus(); } };
+  if (e.key === "ArrowDown") { e.preventDefault(); go(i + 1); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); i <= 0 ? document.getElementById("ipq").focus() : go(i - 1); }
+  else if (e.key === "Enter" && e.target.id === "ipq") { e.preventDefault(); if (opts[0]) opts[0].click(); }
+  else if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closePicker(true); }
+});
+document.addEventListener("pointerdown", (e) => {
+  if (!ipick.hidden && !ipick.contains(e.target) && !(e.target.closest && e.target.closest("[data-addline]") === ipBtn)) closePicker(false);
+}, true);
+document.addEventListener("scroll", (e) => { if (!ipick.hidden && !ipick.contains(e.target)) { if (ipBtn && ipBtn.isConnected) placePicker(); else closePicker(false); } }, true);
+window.addEventListener("resize", () => closePicker(false));
+
+/* ---------- transport: belts, trains, drones ---------- */
+const BELT = [60, 120, 270, 480, 780, 1200], PIPE = 600;
+const WAGON_SLOTS = 32, DRONE_SLOTS = 9, LOCO_PER = 8;
+const DOCK = 27;                                            // seconds to load or unload a wagon (game files)
+let T = Object.assign({ src: "free", lines: [], via: {}, mixed: false, stops: true, maxW: 8, split: true, trainRT: 240, belt: 6, droneRT: 180, batt: 4 }, store.get("sp-transport", {}));
+const saveT = () => store.set("sp-transport", T);
+const stackOf = (c) => (D.items[c].fl ? D.items[c].st / 1000 : D.items[c].st);
+const trainSec = () => T.trainRT + (T.stops ? 2 * DOCK : 0);   // effective round trip, in seconds
+const mmss = (sec) => `${Math.floor(sec / 60)} min ${String(sec % 60).padStart(2, "0")} s`;
+/* Trains for a group of resources sharing the same trains (one resource, or all of them in a mixed train).
+   Beyond the maximum length, either several identical trains share the same stations and platforms
+   (they dock one after the other), or one long train gets extra locomotives. */
+function groupPlan(list) {
+  const res = list.map(({ c, rate }) => {
+    const fl = D.items[c].fl, cap = WAGON_SLOTS * stackOf(c);
+    const per = cap / (trainSec() / 60), feed = fl ? 2 * PIPE : 2 * BELT[T.belt - 1];
+    return { c, rate, fl, cap, per, feed, wCap: Math.max(1, Math.ceil(rate / per - 1e-9)), pFeed: Math.max(1, Math.ceil(rate / feed - 1e-9)) };
+  });
+  const WCap = res.reduce((a, r) => a + r.wCap, 0);
+  const lenFor = (n) => res.reduce((a, r) => a + Math.max(Math.ceil(r.wCap / n), r.pFeed), 0);
+  let trains = T.split && WCap > T.maxW ? Math.ceil(WCap / T.maxW) : 1;
+  if (T.split) while (lenFor(trains) > T.maxW && trains < WCap && lenFor(trains + 1) < lenFor(trains)) trains++;   // rounding can make a train too long
+  for (const r of res) {
+    const need = Math.ceil(r.wCap / trains);
+    r.k = Math.max(need, r.pFeed);               // wagons of this resource in each train = its platforms on each side
+    r.byFeed = r.pFeed > need;
+    r.fill = r.rate / (trains * r.k * r.per);
+    r.maxSec = trains * r.k * r.cap / r.rate * 60 - (T.stops ? 2 * DOCK : 0);
+  }
+  const len = res.reduce((a, r) => a + r.k, 0);
+  const locos = T.split ? 1 : Math.max(1, Math.ceil(len / T.maxW));
+  return { res, trains, len, locos, tooLong: len > T.maxW && T.split };
+}
+function trainCalc(c, rate) {           // the plan that applies to this resource, alone or inside the mixed train
+  const all = T.mixed ? curTrainLines.filter((l) => viaOf(l.c) === "train") : [];
+  const G = all.length > 1 && all.some((l) => l.c === c) ? groupPlan(all) : groupPlan([{ c, rate }]);
+  const r = G.res.find((x) => x.c === c);
+  return { ...r, trains: G.trains, len: G.len, locos: G.locos, wagons: G.trains * r.k, mixed: G.res.length > 1 };
+}
+let curTrainLines = [];
+function droneCalc(c, rate) {
+  if (D.items[c].fl) return null;
+  const cap = DRONE_SLOTS * stackOf(c), rt = T.droneRT / 60, per = cap / rt;
+  const drones = Math.max(1, Math.ceil(rate / per - 1e-9));
+  return { cap, per, drones, batt: drones * T.batt / rt, fill: rate / (drones * per) };
+}
+function beltCalc(c, rate) {
+  const fl = D.items[c].fl, list = fl ? [PIPE / 2, PIPE] : BELT, names = fl ? ["Mk.1", "Mk.2"] : ["Mk.1", "Mk.2", "Mk.3", "Mk.4", "Mk.5", "Mk.6"];
+  const i = list.findIndex((cap) => rate <= cap + EPS);
+  if (i !== -1) return { n: 1, tier: names[i], fl };
+  return { n: Math.ceil(rate / list[list.length - 1] - EPS), tier: names[names.length - 1], fl };
+}
+const beltTxt = (b) => `${b.n} ${b.fl ? (b.n > 1 ? "tuyaux" : "tuyau") : "tapis"} ${b.tier}`;
+const viaOf = (c) => { const v = T.via[c] || "belt"; return v === "drone" && D.items[c].fl ? "belt" : v; };
+function viaTxt(c, rate) {
+  const v = viaOf(c);
+  if (v === "train") { const t = trainCalc(c, rate); return `Train · ${t.trains > 1 ? `${t.trains} trains × ` : ""}${t.k} wagon${t.k > 1 ? "s" : ""}${t.mixed ? " (mixte)" : ""}`; }
+  if (v === "drone") { const d = droneCalc(c, rate); return `Drones · ${d.drones} drone${d.drones > 1 ? "s" : ""}`; }
+  return beltTxt(beltCalc(c, rate));
+}
+function logistics(lines) {                // totals for the chosen transport of each line
+  curTrainLines = lines.filter((l) => l.rate > 0);
+  const belts = {}, trainLines = [];
+  let drones = 0, batt = 0, ports = 0;
+  for (const { c, rate } of curTrainLines) {
+    const v = viaOf(c);
+    if (v === "train") trainLines.push({ c, rate });
+    else if (v === "drone") { const d = droneCalc(c, rate); drones += d.drones; batt += d.batt; ports += d.drones + 1; }
+    else { const b = beltCalc(c, rate); const k = beltTxt({ ...b, n: 1 }).replace(/^1 /, ""); belts[k] = (belts[k] || 0) + b.n; }
+  }
+  const mixed = T.mixed && trainLines.length > 1;
+  const groups = (mixed ? [trainLines] : trainLines.map((l) => [l])).map((g) => ({ ...groupPlan(g), cs: g.map((l) => l.c) }));
+  let nTrains = 0, locos = 0, trainW = 0, platforms = 0;
+  for (const g of groups) { nTrains += g.trains; locos += g.trains * g.locos; trainW += g.trains * g.len; platforms += 2 * g.len; }
+  const stations = groups.length * 2;
+  const mw = stations * 50 + platforms * 50 + ports * 100;
+  const parts = [];
+  for (const k in belts) parts.push(`${belts[k]} ${k}`);
+  if (nTrains) parts.push(`${nTrains} train${nTrains > 1 ? "s" : ""}${mixed ? " mixte" + (nTrains > 1 ? "s" : "") : ""} (${trainW} wagon${trainW > 1 ? "s" : ""})`);
+  if (drones) parts.push(`${drones} drone${drones > 1 ? "s" : ""}`);
+  return { belts, groups, mixed, nTrains, trainW, locos, stations, platforms, drones, ports, batt, mw, summary: parts.join(", ") };
+}
+function factoryRaw() {
+  const prev = choice; choice = choiceF; lvlMemo = {}; needMemo = {};
+  const P = plan(factory.filter((f) => f.rate > 0));
+  choice = prev; lvlMemo = {}; needMemo = {};
+  return Object.keys(P.raw).sort((a, b) => P.raw[b] - P.raw[a]).map((c) => ({ c, rate: P.raw[c] }));
+}
+const tLines = () => (T.src === "factory" ? factoryRaw() : T.lines);
+function timeField(key, label) {
+  const sec = T[key];
+  return `<div class="tfield"><span class="tlabel">${label}</span><span class="time">
+    <input type="text" inputmode="numeric" autocomplete="off" maxlength="3" id="${key}-m" data-time="${key}" data-part="m" value="${Math.floor(sec / 60)}" aria-label="${label}, minutes"><span>min</span>
+    <input type="text" inputmode="numeric" autocomplete="off" maxlength="2" id="${key}-s" data-time="${key}" data-part="s" value="${String(sec % 60).padStart(2, "0")}" aria-label="${label}, secondes"><span>s</span></span></div>`;
+}
+function renderTransport() {
+  const lines = tLines();
+  let h = modeBar() + `<div class="card"><section class="head"><div><div class="eyebrow">Tapis, train ou drones</div><h2>Transport</h2></div>
+    <div class="seg" role="group" aria-label="Ressources à transporter"><button class="segb" data-tsrc2="free" aria-pressed="${T.src === "free"}">Saisie libre</button><button class="segb" data-tsrc2="factory" aria-pressed="${T.src === "factory"}">Ressources de Mon usine</button></div></section>
+    <section>`;
+  if (T.src === "factory") {
+    h += lines.length ? `<p class="note" style="margin:0 0 10px">Les débits viennent de Mon usine et suivent ses changements.</p><div class="goals">` +
+      lines.map((l) => `<div class="goal tline">${icon(l.c)}<div class="g-name"><button class="link" data-pick="${l.c}">${esc(name(l.c))}</button></div><span class="num">${fmt(l.rate)}${unit(l.c)}/min</span></div>`).join("") + `</div>`
+      : `<p class="note" style="margin:0">Votre usine n'a aucune ressource à amener. <button class="link" data-view="factory">Ouvrir Mon usine</button></p>`;
+  } else {
+    h += (lines.length ? `<div class="goals">` + lines.map((l, i) => `<div class="goal tline" id="tline-${l.c}">${icon(l.c)}<div class="g-name"><button class="link" data-pick="${l.c}">${esc(name(l.c))}</button></div>
+        <label class="g-rate"><input type="text" inputmode="decimal" autocomplete="off" value="${fmtIn(l.rate)}" data-trate="${i}" id="trate-${l.c}" aria-label="Débit de ${esc(name(l.c))}"> <span class="num">${unit(l.c).trim() || ""} / min</span></label>
+        <button class="btn icon" data-tremove="${i}" aria-label="Retirer ${esc(name(l.c))}">Retirer</button></div>`).join("") + `</div>` : `<p class="note" style="margin:0">Ajoutez les ressources à déplacer et leur débit. Vous pouvez aussi reprendre celles de Mon usine.</p>`) +
+      `<button class="btn addgoal" data-addline="transport" aria-haspopup="listbox">+ Ajouter une ressource</button>`;
+  }
+  h += `</section><section><div class="tsettings">
+      <div class="tgroup"><h3 class="uh">Train</h3>${timeField("trainRT", "Aller-retour")}
+        <label class="ucheck tstops"><input type="checkbox" id="tstops"${T.stops ? " checked" : ""}> Ajouter le chargement et le déchargement (2 × ${DOCK} s)</label>
+        <p class="note tsub">${T.stops ? `Saisissez le temps de trajet seul : la page ajoute ${2 * DOCK} s d'arrêt aux quais, soit un aller-retour de ${mmss(trainSec())}.` : "Saisissez l'aller-retour complet, arrêts aux quais compris (par exemple mesuré entre deux départs de la même gare)."}</p>
+        <div class="tfield"><span class="tlabel">Tapis vers les quais</span><div class="seg" role="group" aria-label="Niveau des tapis qui servent les quais">${[1, 2, 3, 4, 5, 6].map((k) => `<button class="segb" data-tbelt="${k}" aria-pressed="${T.belt === k}">Mk.${k}</button>`).join("")}</div></div>
+        <div class="tfield"><span class="tlabel">Wagons max par train</span><input type="text" inputmode="numeric" autocomplete="off" maxlength="2" id="tmaxw" value="${T.maxW}" aria-label="Nombre maximum de wagons par train"></div>
+        <div class="tfield"><span class="tlabel">Au-delà</span><div class="seg" role="group" aria-label="Quand il faut plus de wagons"><button class="segb" data-tsplit="1" aria-pressed="${T.split}">Plusieurs trains</button><button class="segb" data-tsplit="0" aria-pressed="${!T.split}">Locomotives en plus</button></div></div>
+        ${lines.length > 1 ? `<div class="tfield"><span class="tlabel">Plusieurs ressources</span><div class="seg" role="group" aria-label="Organisation des trains"><button class="segb" data-tmixed="0" aria-pressed="${!T.mixed}">Un train par ressource</button><button class="segb" data-tmixed="1" aria-pressed="${T.mixed}">Train mixte</button></div></div>` : ""}
+      </div>
+      <div class="tgroup"><h3 class="uh">Drones</h3>${timeField("droneRT", "Aller-retour")}
+        <p class="note tsub">Aller-retour complet, décollage et atterrissage compris (environ 51 s chacun) : utilisez le temps affiché par l'héliport.</p>
+        <div class="tfield"><span class="tlabel">Batteries par aller-retour</span><input type="text" inputmode="decimal" autocomplete="off" id="tbatt" value="${fmtIn(T.batt)}" aria-label="Batteries par aller-retour"></div>
+      </div></div>
+      <p class="note">Mesurez les allers-retours en jeu. Le port de drones affiche le carburant consommé par aller-retour (4 batteries minimum, plus selon la distance).</p>
+    </section></div>`;
+  return h + `<div id="tres">${transportResults(lines)}</div>`;
+}
+function transportResults(lines) {
+  lines = lines.filter((l) => l.rate > 0);
+  if (!lines.length) return "";
+  const L = logistics(lines);
+  let h = `<div class="card"><section><h3 class="uh">Comparaison</h3><p class="note" style="margin:0 0 10px">Cliquez sur une case pour choisir le transport utilisé ; le choix est repris dans Mon usine.</p><div class="tbl"><table class="tcmp"><thead><tr><th>Ressource</th><th class="r">Débit</th><th>Tapis / tuyaux</th><th>Train</th><th>Drones</th></tr></thead><tbody>`;
+  for (const { c, rate } of lines) {
+    const v = viaOf(c), b = beltCalc(c, rate), t = trainCalc(c, rate), d = droneCalc(c, rate);
+    const cell = (k, body, ok = true) => `<td><button class="vcell${v === k ? " on" : ""}" data-via="${k}" data-viac="${c}"${ok ? "" : " disabled"} aria-pressed="${v === k}">${body}</button></td>`;
+    h += `<tr><td><div class="it">${icon(c, "sm")}<button class="link" data-pick="${c}">${esc(name(c))}</button></div></td><td class="r num">${fmt(rate)}${unit(c)}/min</td>` +
+      cell("belt", `<b>${beltTxt(b)}</b><small>${b.fl ? "Pipeline" : "Convoyeur"} ${b.tier} : ${fmt(b.fl ? (b.tier === "Mk.1" ? 300 : 600) : BELT[+b.tier.slice(3) - 1])}${unit(c)}/min chacun</small>`) +
+      cell("train", `<b>${t.trains > 1 ? `${t.trains} trains × ${t.k} wagon${t.k > 1 ? "s" : ""}` : `${t.k} wagon${t.k > 1 ? "s" : ""}`}${t.mixed ? " (train mixte)" : ""} · ${t.k} quai${t.k > 1 ? "s" : ""} de chaque côté</b><small>1 wagon : ${fmt(t.cap)}${unit(c)} ÷ ${mmss(trainSec())} = ${fmt(t.per)}${unit(c)}/min</small>
+        <small>1 quai, alimenté par 2 ${b.fl ? "pipelines Mk.2" : "tapis Mk." + T.belt} : ${fmt(t.feed)}${unit(c)}/min max</small>
+        <small>Remplissage ${fmt(t.fill * 100)} % · ${t.maxSec >= 1 ? `${T.stops ? "trajet" : "aller-retour"} jusqu'à ${mmss(Math.floor(Math.min(t.maxSec, 7200)))} sans wagon de plus` : "aucune marge"}</small>${t.byFeed ? `<small class="warn">Limité par les ${b.fl ? "tuyaux" : "tapis Mk." + T.belt} des quais (${fmt(t.feed)}${unit(c)}/min par quai)</small>` : ""}`) +
+      (d ? cell("drone", `<b>${d.drones} drone${d.drones > 1 ? "s" : ""}</b><small>${fmt(d.cap)} par voyage · ${fmt(d.per)}/min par drone · ${fmt(d.batt)} batteries/min</small>`)
+         : `<td><span class="empty">Les drones ne transportent pas de fluide sans le conditionner.</span></td>`) + `</tr>`;
+  }
+  h += `</tbody></table></div></section>`;
+  h += `<section><h3 class="uh">Avec vos choix</h3><div class="stats">
+      <div class="stat"><b>${L.nTrains}</b><span>train${L.nTrains > 1 ? "s" : ""}${L.mixed ? " (mixte)" : ""} · ${L.locos} locomotive${L.locos > 1 ? "s" : ""}</span></div>
+      <div class="stat"><b>${L.trainW}</b><span>wagon${L.trainW > 1 ? "s" : ""} · ${L.platforms} quai${L.platforms > 1 ? "s" : ""} · ${L.stations} gare${L.stations > 1 ? "s" : ""}</span></div>
+      <div class="stat"><b>${L.drones}</b><span>drone${L.drones > 1 ? "s" : ""} · ${L.ports} héliport${L.ports > 1 ? "s" : ""} · ${fmt(L.batt)} batt./min</span></div>
+      <div class="stat"><b>${fmt(L.mw)}</b><span>MW (gares, quais, héliports)${L.locos ? ` + jusqu'à ${fmt(L.locos * 110)} MW de locomotives` : ""}</span></div>
+    </div>`;
+  if (L.groups.length) h += `<div class="tdetail">` + L.groups.map((g) => `<div class="raw"><div><b>${L.mixed ? "Train mixte" : esc(name(g.cs[0]))}</b>
+      <small>${g.trains > 1 ? `${g.trains} trains identiques, chacun : ` : ""}${g.locos} locomotive${g.locos > 1 ? "s" : ""} + ${g.len} wagon${g.len > 1 ? "s" : ""}${L.mixed ? ` (${g.res.map((r) => `${r.k} ${esc(name(r.c))}`).join(", ")})` : ""}</small>
+      <small>1 gare et ${g.len} quai${g.len > 1 ? "s" : ""} de chaque côté${g.trains > 1 ? ", partagés : les trains s'y succèdent" : ""}</small>
+      ${g.tooLong ? `<small class="warn">Plus de ${T.maxW} wagons par train : ${g.res.some((r) => r.byFeed) ? "les tapis des quais imposent ces quais ; un tapis plus rapide raccourcit le train" : `un wagon par ressource au minimum dans chaque train ; augmentez le maximum ou passez en « Un train par ressource »`}.</small>` : ""}</div></div>`).join("") + `</div>`;
+  if (Object.keys(L.belts).length) h += `<p class="note">Tapis et tuyaux : ${Object.keys(L.belts).map((k) => `${L.belts[k]} ${k}`).join(", ")}.</p>`;
+  h += `<p class="note">Repères : au-delà de ${T.maxW} wagons, ${T.split ? "la page répartit la charge sur plusieurs trains identiques qui partagent les mêmes gares" : `la page ajoute une locomotive par tranche de ${T.maxW} wagons`} ; un conteneur industriel par quai, de chaque côté, pour absorber les 27 s de transfert ; au moins 1 héliport d'arrivée en plus des héliports de départ (1 drone chacun).${L.mixed ? " En train mixte, toutes les ressources partagent le même aller-retour et doivent être disponibles à la même gare de départ." : ""}</p></section></div>`;
+  return h;
+}
+function updateTransport() { const el = document.getElementById("tres"); if (el) { hideTip(); el.innerHTML = transportResults(tLines()); } else render(); }
+function addTransportLine(c) {
+  if (!T.lines.some((l) => l.c === c)) T.lines.push({ c, rate: D.items[c].fl ? 300 : 60 });
+  saveT(); render();
+  const i = document.getElementById("trate-" + c);
+  if (i) { i.focus(); i.select(); i.closest(".goal").classList.add("flash"); }
+}
+function onTimeInput(el) {
+  const val = el.value.replace(/\D/g, "").slice(0, el.dataset.part === "m" ? 3 : 2);
+  sanitizeField(el, val);
+  const key = el.dataset.time;
+  const mEl = document.getElementById(key + "-m"), sEl = document.getElementById(key + "-s");
+  let m = parseInt(mEl.value || "0", 10), sec = parseInt(sEl.value || "0", 10);
+  if (m > 120) { m = 120; mEl.value = "120"; }
+  if (sec > 59) { sec = 59; sEl.value = "59"; }
+  if (m === 120 && sec) { sec = 0; sEl.value = "00"; }
+  const tot = m * 60 + sec;
+  const bad = tot === 0;
+  mEl.classList.toggle("bad", bad); sEl.classList.toggle("bad", bad);
+  if (bad) return;
+  T[key] = tot; saveT(); updateTransport();
+  const sub = key === "trainRT" && T.stops ? document.querySelector(".tgroup .tsub") : null;
+  if (sub) sub.textContent = `Saisissez le temps de trajet seul : la page ajoute ${2 * DOCK} s d'arrêt aux quais, soit un aller-retour de ${mmss(trainSec())}.`;
+}
+function onTransportNum(el) {
+  sanitizeDec(el);
+  let v = parseNum(el.value);
+  el.classList.toggle("bad", v === null && el.value.trim() !== "");
+  if (v === null) return;
+  if (el.id === "tbatt") { if (v > 1000) { v = 1000; el.value = fmtIn(v); } T.batt = v; }
+  else { if (v > MAX_RATE) { v = MAX_RATE; el.value = fmtIn(v); } T.lines[+el.dataset.trate].rate = v; }
+  saveT(); updateTransport();
+}
+document.addEventListener("focusout", (e) => {   // restore valid values when leaving a transport field
+  const el = e.target;
+  if (el.dataset && el.dataset.time) {
+    const k = el.dataset.time, sec = T[k];
+    const mEl = document.getElementById(k + "-m"), sEl = document.getElementById(k + "-s");
+    if (e.relatedTarget === mEl || e.relatedTarget === sEl) return;
+    if (mEl) { mEl.value = Math.floor(sec / 60); mEl.classList.remove("bad"); }
+    if (sEl) { sEl.value = String(sec % 60).padStart(2, "0"); sEl.classList.remove("bad"); }
+  } else if (el.id === "tbatt") { el.value = fmtIn(T.batt); el.classList.remove("bad"); }
+  else if (el.id === "tmaxw") { el.value = T.maxW; el.classList.remove("bad"); }
+  else if (el.dataset && el.dataset.trate != null) {
+    const l = T.lines[+el.dataset.trate];
+    if (l) { if (!(l.rate > 0)) { l.rate = D.items[l.c].fl ? 300 : 60; saveT(); updateTransport(); } el.value = fmtIn(l.rate); el.classList.remove("bad"); }
+  }
+});
+document.addEventListener("click", (e) => {
+  const t = e.target;
+  const s2 = t.closest("[data-tsrc2]");
+  if (s2) { T.src = s2.dataset.tsrc2; saveT(); render(); return; }
+  const tb = t.closest("[data-tbelt]");
+  if (tb) { T.belt = +tb.dataset.tbelt; saveT(); render(); return; }
+  const sp = t.closest("[data-tsplit]");
+  if (sp) { T.split = sp.dataset.tsplit === "1"; saveT(); render(); return; }
+  if (t.id === "tstops") { T.stops = t.checked; saveT(); render(); return; }
+  const tm = t.closest("[data-tmixed]");
+  if (tm) { T.mixed = tm.dataset.tmixed === "1"; saveT(); render(); return; }
+  const vc = t.closest("[data-via]");
+  if (vc) { T.via[vc.dataset.viac] = vc.dataset.via; saveT(); updateTransport(); return; }
+  const tr = t.closest("[data-tremove]");
+  if (tr) { T.lines.splice(+tr.dataset.tremove, 1); saveT(); render(); }
+});
+
+/* ---------- modal dialog ---------- */
+const modal = document.createElement("div");
+modal.id = "modal"; modal.hidden = true;
+document.body.appendChild(modal);
+let modalBack = null;
+function openModal({ title, body, actions, inline }) {
+  hideTip(); closeMenu(false);
+  modalBack = document.activeElement;
+  modal.innerHTML = `<div class="mback" data-mclose="1"></div><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="mtitle">
+    <h3 id="mtitle">${esc(title)}</h3><div class="mbody">${body}</div>
+    <div class="mactions${inline ? " row" : ""}">${inline ? '<button class="btn mbtn" data-mclose="1">Annuler</button>' : ""}${actions.map((a, i) => `<button class="btn mbtn ${a.kind || ""}" data-maction="${i}">${esc(a.label)}${a.hint ? `<small>${esc(a.hint)}</small>` : ""}</button>`).join("")}
+    ${inline ? "" : '<button class="btn mbtn" data-mclose="1">Annuler</button>'}</div></div>`;
+  modal.hidden = false;
+  modal._actions = actions;
+  const first = modal.querySelector("[data-maction]"); if (first) first.focus();
+}
+function closeModal() {
+  modal.hidden = true; modal.innerHTML = "";
+  if (modalBack && modalBack.isConnected) modalBack.focus();
+}
+modal.addEventListener("click", (e) => {
+  const a = e.target.closest("[data-maction]");
+  if (a) { const act = modal._actions[+a.dataset.maction]; closeModal(); act.run(); return; }
+  if (e.target.closest("[data-mclose]")) closeModal();
+});
+modal.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.stopPropagation(); closeModal(); return; }
+  if (e.key === "Tab") {            // keep focus inside the dialog
+    const f = [...modal.querySelectorAll("button")];
+    const i = f.indexOf(document.activeElement);
+    if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
+    else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+  }
+});
+
+/* ---------- tooltips ---------- */
+const tip = document.getElementById("tip");
+let tipEl = null, tipTimer = 0;
+function itemTip(c, extra) {
+  const it = D.items[c], r = recipeOf(c);
+  let h = `<div class="t-head">${icon(c)}<div><b><button class="tlink" data-pick="${c}">${esc(it.fr)}</button></b>${it.en !== it.fr ? `<div class="t-en">${esc(it.en)}</div>` : ""}</div></div>`;
+  h += `<div class="t-meta">${esc(it.cat)} · ${r ? `${lvlOf(c) + 1} étape${lvlOf(c) ? "s" : ""}` : it.raw ? "ressource brute" : "entrée externe"}</div>`;
+  if (r) {
+    const R = D.recipes[r];
+    h += `<div class="t-row">${R.alt ? `Alt. ${esc(R.fr.replace(/\s*\(alternative\)\s*$/i, ""))}` : r === D.std[c] ? "Recette standard" : esc(R.fr)}<br>${mIcon(R.m)}<span> ${esc(mName(R.m))} · </span><span class="num">${fmt(perMin(r, c, "o"))}${unit(c)}/min</span><span> par machine</span></div>`;
+    h += `<div class="t-row"><span>Entrées : </span>${R.i.map(([i, a]) => `<span class="num">${fmt(a * 60 / R.t)}${unit(i)}</span> <button class="tlink" data-pick="${i}">${esc(name(i))}</button>`).join(", ")}</div>`;
+    const byp = R.o.filter(([o]) => o !== c);
+    if (byp.length) h += `<div class="t-row"><span>Sous-produits : </span>${byp.map(([o, a]) => `<span class="num">${fmt(a * 60 / R.t)}${unit(o)}</span> <button class="tlink" data-pick="${o}">${esc(name(o))}</button>`).join(", ")}</div>`;
+  }
+  if (extra) h += `<div class="t-row">${esc(extra)}</div>`;
+  return h;
+}
+function showTip(el) {
+  const ic = el.dataset.pick || el.dataset.tipitem;
+  const html = el.dataset.tip ? esc(el.dataset.tip) : ic && D && D.items[ic] ? itemTip(ic, el.dataset.tipExtra) : "";
+  if (!html) return;
+  tip.innerHTML = html; tip.hidden = false; tipEl = el;
+  el.setAttribute("aria-describedby", "tip");
+  const b = el.getBoundingClientRect(), tw = tip.offsetWidth, th = tip.offsetHeight;
+  const x = Math.max(8, Math.min(b.left + b.width / 2 - tw / 2, innerWidth - tw - 8));
+  let y = b.bottom + 8;
+  if (y + th > innerHeight - 8) y = Math.max(8, b.top - th - 8);
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+let tipHide = 0;
+const hideSoon = () => { clearTimeout(tipHide); tipHide = setTimeout(() => hideTip(true), 250); };
+function hideTip(keepPending) {
+  if (!keepPending) clearTimeout(tipTimer);
+  clearTimeout(tipHide);
+  if (tipEl) tipEl.removeAttribute("aria-describedby");
+  tipEl = null; tip.hidden = true;
+}
+const inTip = (n) => n && tip.contains(n);
+const tipTarget = (n) => (n && n.closest && !inTip(n) && !rmenu.contains(n) ? n.closest("[data-tip], [data-pick], [data-tipitem]") : null);
+document.addEventListener("pointerover", (e) => {
+  if (e.pointerType !== "mouse") return;
+  if (inTip(e.target)) { clearTimeout(tipHide); return; }   // keep it open while hovered
+  const t = tipTarget(e.target);
+  if (!t) return;
+  if (t === tipEl) { clearTimeout(tipHide); return; }
+  clearTimeout(tipTimer);
+  const quick = !tip.hidden;   // a tooltip is already open: switch faster
+  tipTimer = setTimeout(() => { hideTip(true); showTip(t); }, quick ? 120 : 350);
+});
+document.addEventListener("pointerout", (e) => {
+  const to = e.relatedTarget;
+  if (inTip(e.target)) { if (!inTip(to) && !(tipEl && tipEl.contains(to))) hideSoon(); return; }
+  const t = tipTarget(e.target);
+  if (!t) return;
+  if (t !== tipEl) { if (!(to && t.contains(to))) clearTimeout(tipTimer); return; }
+  if (!(to && (t.contains(to) || inTip(to)))) hideSoon();
+});
+document.addEventListener("focusin", (e) => { if (inTip(e.target)) return; const t = tipTarget(e.target); if (t && t.matches(":focus-visible")) showTip(t); });
+document.addEventListener("focusout", (e) => { if (!inTip(e.relatedTarget)) hideSoon(); });
+document.addEventListener("pointerdown", (e) => { if (!inTip(e.target)) hideTip(); });
+document.addEventListener("scroll", hideTip, true);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideTip(); });
+
+fetch("data.json").then((r) => r.json()).then((data) => {
+  D = data;
+  for (const c in choiceF) if (choiceF[c] && !D.recipes[choiceF[c]]) delete choiceF[c];
+  factory = factory.filter((f) => D.items[f.c] && f.rate >= 0);
+  const saved = store.get("sp-sel", null);
+  sel = saved && D.items[saved] ? saved : "Desc_IronPlateReinforced_C";
+  const t = fromHash();
+  const sv = store.get("sp-view", "item");
+  if (t === "transport" || (!t && sv === "transport")) showTransport();
+  else if (t === "usine" || (!t && sv === "factory")) showFactory();
+  else select(t || sel);
+}).catch(() => {
+  document.getElementById("sheet").innerHTML = `<div class="card"><section><p>Les données n'ont pas pu être chargées. Rechargez la page.</p></section></div>`;
+});
+})();
+</script>
+</body>
+</html>
