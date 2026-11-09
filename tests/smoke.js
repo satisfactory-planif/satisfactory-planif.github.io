@@ -48,6 +48,21 @@ const num = (s) => parseFloat(s.replace(/\s/g, "").replace(",", "."));
       if (errors.length) { failed++; console.log(`FAIL ${t.name} · erreurs JS : ${errors.join(" | ")}`); }
       await page.close();
     }
+
+    // No horizontal scroll at 390 px on any view (CLAUDE.md), with a factory large enough to fill the steps table.
+    const page = await browser.newPage({ viewport: { width: 390, height: 800 } });
+    await page.addInitScript(() => {
+      localStorage.clear();
+      localStorage.setItem("sp-factory", JSON.stringify([{ c: "Desc_ModularFrameHeavy_C", rate: 2 }, { c: "Desc_AluminumIngot_C", rate: 60 }]));
+    });
+    for (const [label, hash] of [["Fiche pièce", "#desc-modularframeheavy-c"], ["Mon usine", "#usine"], ["Transport", "#transport"]]) {
+      await page.goto(URL + hash);
+      await page.waitForSelector(".sheet .card", { timeout: 10000 });
+      const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      if (over > 0) failed++;
+      console.log(`${over > 0 ? "FAIL" : "OK  "} ${label} à 390 px · débordement horizontal : ${over} px`);
+    }
+    await page.close();
   } finally {
     await browser.close();
     server.kill();
