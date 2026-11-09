@@ -188,6 +188,25 @@ function checkImages() {
       await page.close();
     }
 
+    // Trees at 390 px: a long line wraps without leaving the fold marker alone on its line,
+    // and the machine icon stays on the same line as its count.
+    {
+      const { page, errors } = await open(browser, { "sp-factory": [{ c: "Desc_AluminumIngot_C", rate: 150 }], "sp-tab-f": "tree" }, "#usine", { width: 390, height: 800 });
+      await page.waitForSelector(".tree details", { timeout: 10000 });
+      await page.click('.tree details[data-p="Desc_AluminumIngot_C,Desc_AluminumScrap_C"] > summary', { position: { x: 3, y: 8 } });
+      await page.waitForSelector('.tree details[data-p$="Desc_AluminaSolution_C"]', { timeout: 10000 });
+      const bad = await page.$$eval(".tree summary", (ss) => ss.flatMap((s) => {
+        const out = [], k = s.parentElement.dataset.k, row = s.querySelector(".row").getBoundingClientRect();
+        if (row.top - s.getBoundingClientRect().top > 6) out.push(`${k} : marqueur seul sur sa ligne`);
+        const ic = s.querySelector(".mico").getBoundingClientRect(), tx = s.querySelector(".mico + .num").getBoundingClientRect();
+        if (Math.abs((ic.top + ic.bottom) / 2 - (tx.top + tx.bottom) / 2) > 8) out.push(`${k} : icône de machine séparée du texte`);
+        return out;
+      }));
+      check(!bad.length, `Arbres à 390 px · retours à la ligne : ${bad.length ? bad.join(", ") : "corrects"}`);
+      if (errors.length) check(false, `Arbres à 390 px · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+    }
+
     // No horizontal scroll at 390 px on any view (CLAUDE.md), with a factory large enough to fill the steps table.
     const big = { "sp-factory": [{ c: "Desc_ModularFrameHeavy_C", rate: 2 }, { c: "Desc_AluminumIngot_C", rate: 60 }] };
     for (const [label, hash] of [["Fiche pièce", "#desc-modularframeheavy-c"], ["Mon usine", "#usine"], ["Transport", "#transport"]]) {

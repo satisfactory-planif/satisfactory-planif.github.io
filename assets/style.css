@@ -99,8 +99,14 @@ td .mach { display: inline-block; min-width: 120px; }
 .tree { font-size: 16px; }
 .tree details { margin-left: 16px; border-left: 1px solid var(--line); padding-left: 10px; }
 .tree > details { margin-left: 0; }
-.tree summary { cursor: pointer; padding: 3px 0; display: list-item; }
-.tree .row { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; vertical-align: middle; }
+.tree summary { cursor: pointer; padding: 3px 0; display: flex; align-items: flex-start; gap: 6px; list-style: none; }
+.tree summary::-webkit-details-marker { display: none; }
+.tree summary::before { content: "▶"; flex: none; font-size: 10px; line-height: 30px; transition: transform .15s; }   /* marker on the first line, never alone */
+.tree details[open] > summary::before { transform: rotate(90deg); }
+.tree .row { display: flex; align-items: center; gap: 4px 6px; flex-wrap: wrap; min-width: 0; }
+.tree .nh, .tree .mk { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }   /* icon stays with its quantity, name or machine */
+.tree .mk { margin-left: 8px; }
+.fromg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
 .tree .leaf { margin-left: 16px; padding: 3px 0 3px 10px; border-left: 1px solid var(--line); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .tree .q { color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
