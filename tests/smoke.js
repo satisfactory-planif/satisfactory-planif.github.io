@@ -170,6 +170,24 @@ function checkImages() {
       await page.close();
     }
 
+    // By-products reused in the chain: shown under the step that makes them, no longer on the consuming step's row.
+    // 150 aluminium ingots/min (90 scrap + 75 silica → 60 ingots): 225 scrap and 187,5 silica; 225 scrap (240 alumina → 360 scrap)
+    // needs 150 alumina, whose refinery (120 alumina + 50 silica) gives 150 × 50/120 = 62,5 silica, all reused → 125 silica to make.
+    {
+      const { page, errors } = await open(browser, { "sp-factory": [{ c: "Desc_AluminumIngot_C", rate: 150 }], "sp-tab-f": "steps" }, "#usine");
+      await page.waitForSelector("[data-xp]", { timeout: 10000 });
+      await page.click('[data-xp="Desc_AluminaSolution_C"]');
+      const reu = await page.$$eval("#row-Desc_AluminaSolution_C + tr.xrow .eyebrow", (els) => {
+        const e = els.find((x) => x.textContent.trim() === "Surplus réutilisé");
+        return e ? [...e.nextElementSibling.querySelectorAll(".chip")].map((c) => c.textContent.replace(/\s+/g, " ").trim()) : null;
+      });
+      check(JSON.stringify(reu) === JSON.stringify(["Silice +62,5/min"]), `Étapes · Solution d'alumine, surplus réutilisé : attendu ["Silice +62,5/min"], obtenu ${JSON.stringify(reu)}`);
+      const silica = await page.$eval("#row-Desc_Silica_C td.r", (e) => e.textContent.replace(/\s+/g, " ").trim());
+      check(silica === "125/min", `Étapes · ligne Silice sans « récupérés » : attendu « 125/min », obtenu « ${silica} »`);
+      if (errors.length) check(false, `Étapes (surplus réutilisé) · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+    }
+
     // No horizontal scroll at 390 px on any view (CLAUDE.md), with a factory large enough to fill the steps table.
     const big = { "sp-factory": [{ c: "Desc_ModularFrameHeavy_C", rate: 2 }, { c: "Desc_AluminumIngot_C", rate: 60 }] };
     for (const [label, hash] of [["Fiche pièce", "#desc-modularframeheavy-c"], ["Mon usine", "#usine"], ["Transport", "#transport"]]) {
