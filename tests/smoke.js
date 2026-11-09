@@ -30,6 +30,11 @@ const FACTORY_CASES = [
 const TRAIN_CASES = [
   { name: "Train : 1 400 minerai de fer/min, aller-retour 4 min avec arrêts", c: "Desc_OreIron_C", rate: 1400,
     T: { trainRT: 240, stops: true, belt: 6, maxW: 8, split: true }, wagons: 3 },
+  // Same flow with Mk.3 belts to the platforms: 2 × 270 = 540/min per platform → ceil(1 400 / 540) = 3 platforms (= 3 wagons);
+  // each platform handles 1 400 / 3 = 466,67/min, more than one Mk.3 belt (270) → 2 Mk.3 belts per platform.
+  { name: "Train : 1 400 minerai de fer/min, tapis Mk.3 vers les quais", c: "Desc_OreIron_C", rate: 1400,
+    T: { trainRT: 240, stops: true, belt: 3, maxW: 8, split: true }, wagons: 3,
+    perQuai: "Chaque quai charge puis décharge 466,67/min : 2 tapis Mk.3 par quai" },
 ];
 
 const num = (s) => parseFloat(s.replace(/\s/g, "").replace(",", "."));
@@ -87,6 +92,12 @@ function checkImages() {
       await page.waitForSelector('.vcell[data-via="train"] b', { timeout: 10000 });
       const txt = await page.$eval('.vcell[data-via="train"] b', (e) => e.textContent.trim());
       check(parseInt(txt, 10) === t.wagons && !/trains ×/.test(txt), `${t.name} : attendu ${t.wagons} wagons, obtenu « ${txt} »`);
+      if (t.perQuai) {
+        const li = await page.$$eval(".bgrp li", (els) => els.map((e) => e.textContent.replace(/\s+/g, " ").trim()));
+        check(li.includes(t.perQuai), `${t.name} · À construire : attendu « ${t.perQuai} », obtenu ${JSON.stringify(li)}`);
+        const notes = await page.$$eval(".tnotes li", (els) => els.map((e) => e.textContent));
+        check(notes.length === 1 && /conteneur industriel/.test(notes[0]), `${t.name} · Repères : seule la note des quais attendue, obtenu ${JSON.stringify(notes)}`);
+      }
       if (errors.length) check(false, `${t.name} · erreurs JS : ${errors.join(" | ")}`);
       await page.close();
     }
