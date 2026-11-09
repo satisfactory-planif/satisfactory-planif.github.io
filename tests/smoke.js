@@ -77,6 +77,40 @@ async function open(browser, storage, hash, viewport) {
       await page.close();
     }
 
+    // Sharing by URL: a link opens the factory with its recipe choices, the address goes back to #usine.
+    const shared = "#usine:ModularFrameHeavy*2;IronIngot=Alternate_PureIronIngot";
+    {
+      const { page, errors } = await open(browser, {}, shared);
+      await page.waitForSelector(".raws .raw", { timeout: 10000 });
+      const ore = await page.$$eval(".raws .raw", (els) => els.find((e) => e.querySelector("button.link")?.textContent.trim() === "Minerai de fer")?.querySelector("b").textContent);
+      check(ore && Math.abs(num(ore) - 341.54) < 0.01, `Lien partagé (lingot de fer pur) · minerai de fer : attendu 341,54, obtenu ${ore}`);
+      check(await page.evaluate(() => location.hash) === "#usine", "Lien partagé · l'adresse redevient #usine");
+      // the "Partager" button rebuilds the same code (clipboard, or the fallback dialog)
+      await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+      await page.click("[data-share]");
+      await page.waitForTimeout(300);
+      const code = await page.evaluate(async () => {
+        const i = document.getElementById("share-url");
+        const u = i ? i.value : await navigator.clipboard.readText();
+        return u.slice(u.indexOf("#"));
+      });
+      check(code === shared, `Bouton Partager · attendu ${shared}, obtenu ${code}`);
+      if (errors.length) check(false, `Lien partagé · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+    }
+    {
+      // an existing factory is only replaced after confirmation
+      const { page, errors } = await open(browser, { "sp-factory": [{ c: "Desc_IronPlate_C", rate: 30 }] }, "#usine:AluminumIngot*60");
+      await page.waitForSelector("#modal:not([hidden]) [data-maction]", { timeout: 10000 });
+      const before = await page.$$eval(".goal .g-name", (els) => els.map((e) => e.textContent.trim()));
+      await page.click("#modal [data-maction]");
+      const after = await page.$$eval(".goal .g-name", (els) => els.map((e) => e.textContent.trim()));
+      check(before.join() === "Plaque de fer" && after.join() === "Lingot d'aluminium",
+        `Lien partagé sur une usine existante · confirmation puis remplacement : ${before} → ${after}`);
+      if (errors.length) check(false, `Lien partagé (remplacement) · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+    }
+
     // No horizontal scroll at 390 px on any view (CLAUDE.md), with a factory large enough to fill the steps table.
     const big = { "sp-factory": [{ c: "Desc_ModularFrameHeavy_C", rate: 2 }, { c: "Desc_AluminumIngot_C", rate: 60 }] };
     for (const [label, hash] of [["Fiche pièce", "#desc-modularframeheavy-c"], ["Mon usine", "#usine"], ["Transport", "#transport"]]) {

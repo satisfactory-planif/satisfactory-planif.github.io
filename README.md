@@ -3,7 +3,7 @@
 Outil web statique (une page, sans build ni backend) pour Satisfactory 1.2, en français :
 
 - **Fiche pièce** : machine, ingrédients (par pièce ou par machine/min), ressources brutes totales, recettes alternatives comparées, onglets « Utilisé dans » et « Sans cette pièce ». Recettes standard uniquement, aucune donnée d'usine.
-- **Mon usine** : plusieurs objectifs (pièce + débit), recettes alternatives par usine, sous-produits déduits, étapes avec nombre de machines, arbres de production, ressources brutes à amener.
+- **Mon usine** : plusieurs objectifs (pièce + débit), recettes alternatives par usine, sous-produits déduits, étapes avec nombre de machines, arbres de production, ressources brutes à amener. Bouton « Partager » : copie un lien qui rouvre l'usine ailleurs.
 - **Transport** : tapis, trains (mono ou mixtes, découpage en plusieurs trains), drones (batteries), en saisie libre ou à partir des ressources de Mon usine.
 
 ## Lancer en local
@@ -87,7 +87,16 @@ Le script reproduit à l'identique le `data.json` actuel avec les fichiers 1.2 (
 - Ombres de profondeur `--sh-1`, `--sh-2`, `--sh-btn`, `--sh-in`.
 - Saisie des débits : virgule (le point est converti), une seule virgule, 2 décimales max, 100 000 max ; un champ vidé reprend une valeur au blur. Temps : minutes + secondes entières, 2 h max.
 - Composants maison : infobulles interactives (`#tip`), menu de recettes (`#rmenu`), sélecteur de pièce (`#ipick`), toast, modale (`#modal`).
-- État local (`localStorage`) : `sp-choice-f`, `sp-factory`, `sp-sel`, `sp-view`, `sp-tab-i`, `sp-tab-f`, `sp-qmode`, `sp-transport` (+ ancien `sp-choice`, lu en repli). Ancres : `#usine`, `#transport`, `#desc-ironplate-c` (fiche).
+- État local (`localStorage`) : `sp-choice-f`, `sp-factory`, `sp-sel`, `sp-view`, `sp-tab-i`, `sp-tab-f`, `sp-qmode`, `sp-transport` (+ ancien `sp-choice`, lu en repli). Ancres : `#usine`, `#transport`, `#desc-ironplate-c` (fiche), `#usine:…` (usine partagée).
+
+### Lien de partage
+
+`#usine:ModularFrameHeavy*2,AluminumIngot*60;IronIngot=Alternate_PureIronIngot,Water=`
+
+- Avant `;` : les objectifs `pièce*débit` (débit en notation décimale à point, 2 décimales). Après : les recettes choisies `pièce=recette`, une recette vide signifiant « fourni de l'extérieur » (ou « ressource brute » pour une ressource). Seuls les choix qui diffèrent de la recette par défaut sont écrits.
+- Les classes du jeu perdent leur préfixe `Desc_` / `Recipe_` et leur suffixe `_C` quand elles les ont ; sinon la classe complète est écrite.
+- À l'ouverture, les pièces et recettes inconnues sont ignorées ; si l'usine locale n'est pas vide et diffère, une confirmation est demandée avant de la remplacer. L'adresse redevient ensuite `#usine`. Les réglages de Transport ne sont pas partagés.
+- Format public : le modifier casse les liens déjà diffusés. Pour le faire évoluer, garder la lecture de l'ancien format.
 
 ## Tests
 
@@ -105,6 +114,7 @@ npm test
 | Idem avec Lingot de fer pur (7 minerai + 4 eau → 13 lingots) | 300 lingots → 161,54 + 180 (acier) = 341,54 minerai, 92,31 m³ d'eau |
 | Lingot d'aluminium 60/min | 60 m³ d'eau nette (après recyclage) |
 | Train, 1 400 minerai/min, aller-retour 4 min + arrêts | wagon 3 200 ÷ 4,9 min = 653,06/min → 3 wagons |
+| Lien `#usine:ModularFrameHeavy*2;IronIngot=Alternate_PureIronIngot` | 341,54 minerai ; « Partager » redonne le même lien ; une usine existante n'est remplacée qu'après confirmation |
 | Les trois vues à 390 px | aucun défilement horizontal |
 
 ## Limites connues
