@@ -1,0 +1,15 @@
+# Conventions d'interface
+
+- Interface entièrement en français, nombres au format français (virgule décimale).
+- Thèmes clair/sombre via variables CSS (`:root`, `prefers-color-scheme`, `data-theme`). Accent rouille (survol, sélection) ; jaune `--star` pour les recettes alternatives.
+- Ombres de profondeur `--sh-1`, `--sh-2`, `--sh-btn`, `--sh-in`.
+- Saisie des débits : virgule (le point est converti), une seule virgule, 2 décimales max, 100 000 max ; un champ vidé reprend une valeur au blur. Temps : minutes + secondes entières, 2 h max.
+- Composants maison : infobulles interactives (`#tip`), menu de recettes (`#rmenu`), sélecteur de pièce (`#ipick`), toast, modale (`#modal`).
+
+## État local (`localStorage`)
+
+`sp-choice-f`, `sp-factory`, `sp-sel`, `sp-view`, `sp-tab-i`, `sp-tab-f`, `sp-qmode`, `sp-transport` (+ ancien `sp-choice`, lu en repli). Toute nouvelle clé s'ajoute ici.
+
+## Ancres
+
+`#usine`, `#transport`, `#desc-ironplate-c` (fiche), `#usine:…` (usine partagée, voir [partage-url.md](partage-url.md)).

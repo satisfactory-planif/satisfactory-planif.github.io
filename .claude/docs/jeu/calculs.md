@@ -1,0 +1,26 @@
+# Calculs
+
+## Mon usine (`plan(targets)`)
+
+- Point fixe itératif : la demande de chaque pièce génère des machines, dont les sorties secondaires sont déduites de la demande des autres (`supply`, `supplyBy`), jusqu'à stabilisation (`converged`). Si les recettes choisies forment une boucle qui ne converge pas, la page l'indique.
+- Résultat : `demand`, `supply`, `mach`, `raw`, `recovered`, `surplus`, `nMach`, `mw`, `flows` (consommateur → quantité), `supplyBy`.
+- Machines : « 1 machine à X % » ou « N machines, dont 1 à X % » (pas d'overclocking ni de Somersloop dans le calcul).
+- Arbres : nets des sous-produits (`netSplit`) : « dont X récupérés, sous-produit de … », le reste à fabriquer ou amener.
+
+## Transport
+
+- Wagon : 32 emplacements × taille de pile ; wagon fluide 1 600 m³ (sources : [donnees.md](donnees.md)).
+- Aller-retour effectif = temps saisi + 54 s si « arrêts » est coché (27 s chargement + 27 s déchargement).
+- Débit d'alimentation d'un quai = 2 × tapis choisi (fluides : 2 × 600 m³/min).
+- Wagons = max(ceil(débit / débit par wagon), ceil(débit / alimentation des quais)).
+- Au-delà de `maxW` wagons (8 par défaut) : plusieurs trains identiques partageant les gares, ou locomotives supplémentaires (1 par 8 wagons) selon l'option.
+- Trains mixtes : une composition par train.
+- Drones : 9 piles par trajet, batteries/min = drones × batteries par aller-retour / durée ; fluides impossibles.
+- Tapis : niveaux 60 / 120 / 270 / 480 / 780 / 1 200 ; tuyaux 300 / 600 m³/min.
+
+## Limites connues
+
+- Pas d'overclocking, de Somersloop ni de calcul de foreuses/extracteurs dans Mon usine.
+- Puissance moyenne seulement pour les machines à puissance variable.
+- Capacités wagon et drone reprises du wiki, non relues dans les fichiers du jeu.
+- Pas de comparaison de coût de construction entre tapis, trains et drones.
