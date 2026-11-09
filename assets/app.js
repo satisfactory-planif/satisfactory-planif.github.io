@@ -1078,7 +1078,7 @@ function compareRow(c, rate) {
     t.maxSec >= 1 ? `${T.stops ? "Trajet" : "Aller-retour"} jusqu'à ${mmss(Math.floor(Math.min(t.maxSec, 7200)))} sans wagon de plus` : "Aucune marge : un trajet plus long demande un wagon de plus"].join("\n");
   return `<tr><td class="res"><div class="it">${icon(c, "sm")}<div><button class="link" data-pick="${c}">${esc(name(c))}</button><small class="num">${fmt(rate)}${u}/min</small></div></div></td>` +
     cell("belt", b.fl ? "Tuyaux" : "Tapis", `<b>${beltTxt(b)}</b><small>${fmt(tierRate(b))}${u}/min chacun</small>`) +
-    cell("train", "Train", `<b>${t.trains > 1 ? `${t.trains} trains × ${plural(t.k, "wagon")}` : plural(t.k, "wagon")}</b>${t.mixed ? "<small>train mixte</small>" : ""}<small>rempli à ${fmt(t.fill * 100)} %<span class="info" aria-hidden="true">ⓘ</span></small>${t.byFeed ? `<small class="warn">limité par les quais</small>` : ""}`, trainTip) +
+    cell("train", "Train", `<b>${t.trains > 1 ? `${t.trains} trains × ${plural(t.k, "wagon")}` : plural(t.k, "wagon")}${t.mixed ? ` <span class="mix">(train mixte)</span>` : ""}</b><small>Rempli à ${fmt(t.fill * 100)} %<span class="info" aria-hidden="true">ⓘ</span></small>${t.byFeed ? `<small class="warn">Limité par les quais</small>` : ""}`, trainTip) +
     (d ? cell("drone", "Drones", `<b>${plural(d.drones, "drone")}</b><small>${fmt(d.batt)} batt./min<span class="info" aria-hidden="true">ⓘ</span></small>`,
         `1 drone : ${fmt(d.cap)} par voyage ÷ ${mmss(T.droneRT)} = ${fmt(d.per)}/min\nRempli à ${fmt(d.fill * 100)} %\n${fmt(d.batt)} batteries/min`)
        : `<td data-l="Drones"><span class="vnone" data-tip="Les drones ne transportent pas de fluide sans le conditionner.">Impossible : fluide</span></td>`) + `</tr>`;
@@ -1130,15 +1130,18 @@ function transportResults(lines) {
         <p class="bcalc">${b.fl ? "Pipeline" : "Convoyeur"} ${b.tier} : ${fmt(tierRate(b))}${u}/min chacun</p></div>`);
     }
   }
-  const tot = [];
-  if (L.nTrains) tot.push(plural(L.nTrains, "train"), plural(L.locos, "locomotive"), plural(L.trainW, "wagon"), plural(L.stations, "gare"), `${plural(L.platforms, "quai")}${fn("quai")}`);
-  for (const k in L.belts) tot.push(`${L.belts[k]} ${k}`);
-  if (L.drones) tot.push(plural(L.drones, "drone"), `${plural(L.ports, "héliport")}${fn("port")}`, `${fmt(L.batt)} batteries/min`);
-  if (L.mw) tot.push(`${fmt(L.mw)} MW (gares, quais, héliports)${L.locos ? ` + jusqu'à ${fmt(L.locos * 110)} MW de locomotives` : ""}`);
+  const tot = [], card = (n, label, sub) => `<div class="tcard"><div class="tc-main"><b class="num">${n}</b><span>${label}</span></div>${sub ? `<small>${sub}</small>` : ""}</div>`;
+  if (L.nTrains) {
+    tot.push(card(fmt(L.nTrains), L.nTrains > 1 ? "trains" : "train", `${plural(L.locos, "locomotive")} · ${plural(L.trainW, "wagon")}`));
+    tot.push(card(fmt(L.stations), "gares", `${plural(L.platforms, "quai")}${fn("quai")} au total`));
+  }
+  for (const k in L.belts) tot.push(card(fmt(L.belts[k]), L.belts[k] > 1 ? k.replace(/^tuyau /, "tuyaux ") : k));
+  if (L.drones) tot.push(card(fmt(L.drones), L.drones > 1 ? "drones" : "drone", `${plural(L.ports, "héliport")}${fn("port")} · ${fmt(L.batt)} batteries/min`));
+  if (L.mw) tot.push(card(fmt(L.mw), "MW", `Gares, quais, héliports${L.locos ? `, + jusqu'à ${fmt(L.locos * 110)} MW de locomotives` : ""}`));
   return `<div class="card"><section><h3 class="uh">Comparaison</h3><p class="note" style="margin:0 0 10px">Choisissez le transport de chaque ressource ; le choix est repris dans Mon usine. Survolez une case pour le détail du calcul.</p>
     <div class="tbl"><table class="tcmp"><thead><tr><th>Ressource</th><th>Tapis / tuyaux</th><th>Train</th><th>Drones</th></tr></thead><tbody>${lines.map((l) => compareRow(l.c, l.rate)).join("")}</tbody></table></div></section>
     <section><h3 class="uh">À construire</h3><div class="build">${blocks.join("")}</div>
-    <div class="btotal"><b>Total</b>${tot.map((x) => `<span>${x}</span>`).join("")}</div>
+    <h4 class="btitle">Total</h4><div class="btotal">${tot.join("")}</div>
     ${keys.length ? `<footer class="tnotes"><b>Repères</b><ol>${keys.map((k) => `<li>${notes[k]}</li>`).join("")}</ol></footer>` : ""}</section></div>`;
 }
 function updateTransport() { const el = document.getElementById("tres"); if (el) { hideTip(); el.innerHTML = transportResults(tLines()); } else render(); }

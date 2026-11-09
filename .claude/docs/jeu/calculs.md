@@ -18,7 +18,7 @@
 - Débit par quai = débit de la ressource ÷ ses quais (les trains identiques se partagent les mêmes quais) ; tapis par quai = ce débit ÷ un tapis du niveau choisi, arrondi au-dessus (2 au plus par construction).
 - Drones : 9 piles par trajet, batteries/min = drones × batteries par aller-retour / durée ; fluides impossibles.
 - Héliports : 1 par drone au départ + 1 d'arrivée par ressource.
-- Affichage : « Comparaison » (une case par transport, détail du calcul en infobulle), puis « À construire » (un bloc par ressource ou par train mixte, avec la ligne de calcul visible pour le tactile), un total et des « Repères » numérotés, affichés seulement quand l'élément concerné est présent (train mixte, plusieurs trains ou locomotives, quais, héliports).
+- Affichage : « Comparaison » (une case par transport, détail du calcul en infobulle), puis « À construire » (un bloc par ressource ou par train mixte, avec la ligne de calcul visible pour le tactile), un total en cartes (trains, gares et quais, tapis, drones, MW) et des « Repères » numérotés, affichés seulement quand l'élément concerné est présent (train mixte, plusieurs trains ou locomotives, quais, héliports).
 - Tapis : niveaux 60 / 120 / 270 / 480 / 780 / 1 200 ; tuyaux 300 / 600 m³/min.
 
 ## Limites connues
