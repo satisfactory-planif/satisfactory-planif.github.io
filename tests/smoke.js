@@ -136,6 +136,40 @@ function checkImages() {
       await page.close();
     }
 
+    // Trees: only the first level below is unfolded by default, and a click changes only the clicked node,
+    // even when another step's detail is unfolded afterwards (the results are re-rendered then).
+    {
+      const hmf = { "sp-factory": [{ c: "Desc_ModularFrameHeavy_C", rate: 2 }] };
+      const st = (page, sel) => page.$$eval(sel, (ds) => ds.map((d) => d.dataset.p.replace(/Desc_|_C/g, "") + "=" + (d.open ? 1 : 0)).join(" "));
+      let { page, errors } = await open(browser, { ...hmf, "sp-tab-f": "tree" }, "#usine");
+      await page.waitForSelector(".tree details", { timeout: 10000 });
+      const before = await st(page, ".tree details");
+      check(before === "ModularFrameHeavy=1 ModularFrameHeavy,ModularFrame=0 ModularFrameHeavy,SteelPipe=0 ModularFrameHeavy,SteelPlateReinforced=0 ModularFrameHeavy,IronScrew=0",
+        `Arbres · seul le premier niveau est déplié : ${before}`);
+      await page.click('.tree details[data-p="Desc_ModularFrameHeavy_C,Desc_IronScrew_C"] > summary', { position: { x: 3, y: 5 } });
+      await page.waitForTimeout(150);
+      const after = await st(page, ".tree details");
+      check(after === "ModularFrameHeavy=1 ModularFrameHeavy,ModularFrame=0 ModularFrameHeavy,SteelPipe=0 ModularFrameHeavy,SteelPlateReinforced=0 ModularFrameHeavy,IronScrew=1 ModularFrameHeavy,IronScrew,IronRod=0",
+        `Arbres · un clic sur Vis ne déplie que Vis : ${after}`);
+      if (errors.length) check(false, `Arbres · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+
+      ({ page, errors } = await open(browser, { ...hmf, "sp-tab-f": "steps" }, "#usine"));
+      await page.waitForSelector("[data-xp]", { timeout: 10000 });
+      await page.click('[data-xp="Desc_ModularFrame_C"]');
+      const mf = "#row-Desc_ModularFrame_C + tr.xrow details";
+      const d0 = await st(page, mf);
+      check(d0 === "ModularFrame,IronPlateReinforced=0 ModularFrame,IronRod=0", `Étapes · détail du Cadre modulaire replié par défaut : ${d0}`);
+      await page.click(`${mf}[data-p$="IronRod_C"] > summary`, { position: { x: 3, y: 5 } });
+      await page.click('[data-xp="Desc_SteelPipe_C"]');
+      await page.waitForTimeout(150);
+      const d1 = await st(page, mf);
+      check(d1 === "ModularFrame,IronPlateReinforced=0 ModularFrame,IronRod=1 ModularFrame,IronRod,IronIngot=0",
+        `Étapes · Barre de fer reste seule dépliée après le dépliage d'une autre étape : ${d1}`);
+      if (errors.length) check(false, `Étapes (arbre) · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+    }
+
     // No horizontal scroll at 390 px on any view (CLAUDE.md), with a factory large enough to fill the steps table.
     const big = { "sp-factory": [{ c: "Desc_ModularFrameHeavy_C", rate: 2 }, { c: "Desc_AluminumIngot_C", rate: 60 }] };
     for (const [label, hash] of [["Fiche pièce", "#desc-modularframeheavy-c"], ["Mon usine", "#usine"], ["Transport", "#transport"]]) {

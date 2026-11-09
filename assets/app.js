@@ -24,6 +24,7 @@ let qMode = store.get("sp-qmode", "unit");   // "unit" = for 1 part, "machine" =
 let tab = "uses", tabI = store.get("sp-tab-i", "uses"), tabF = store.get("sp-tab-f", "steps");
 let flash = "";
 const openRows = new Set();
+const treeOpen = new Map();   // tree node "scope|path" → open; memory only, so re-renders keep what the user unfolded
 const uF = { q: "", cat: "", alt: true, ev: false };
 const hashOf = (c) => c.toLowerCase().replace(/_/g, "-");
 
@@ -345,7 +346,7 @@ function rowDetail(P, k, q) {
   const fl = P.flows[k] || {};
   const dest = Object.keys(fl).sort((a, b) => fl[b] - fl[a]);
   const sur = surplusOf(P, k);
-  let h = `<div class="xbox"><div class="xcol"><div class="eyebrow">Fabrication de ${fmt(q)}${unit(k)}/min</div><div class="tree">${treeKids(k, q, 0, [k])}</div></div>`;
+  let h = `<div class="xbox"><div class="xcol"><div class="eyebrow">Fabrication de ${fmt(q)}${unit(k)}/min</div><div class="tree">${treeKids(k, q, 0, [k], "x")}</div></div>`;
   h += `<div class="xcol"><div class="eyebrow">Destination</div><div class="chips" style="margin-top:6px">` +
     dest.map((d) => d === "__goal"
       ? `<span class="chip static"><span class="tag tgt">Objectif</span> <span class="num">${fmt(fl[d])}${unit(k)}/min</span></span>`
@@ -371,7 +372,7 @@ function netSplit(k, q) {
   const rec = Math.min(q, q * (P.recovered[k] || 0) / dem);
   return { made: Math.max(0, q - rec), rec };
 }
-function treeNode(k, q, depth, path) {
+function treeNode(k, q, depth, path, sc) {   // sc: tree scope, "t" (Arbres tab) or "x" (step detail)
   const r = recipeOf(k);
   const { made, rec } = netSplit(k, q);
   const recTag = rec > EPS ? `<span class="recl"><span class="tag ok" data-tip="Partie couverte par un sous-produit d'une autre étape de la chaîne">dont ${fmt(rec)}${unit(k)} récupérés</span><span class="from">sous-produit de</span>${recFrom(lastP, k, rec)}</span>` : "";
@@ -379,16 +380,17 @@ function treeNode(k, q, depth, path) {
   if (!r) return `<div class="leaf">${lab}<span class="tag raw" data-tip="${D.items[k].raw ? "Ressource extraite, à amener à l'usine" : "Pièce fournie de l'extérieur, non calculée"}">${D.items[k].raw ? "brut" : "entrée"}</span>${rec > EPS && made > EPS ? `<span class="rest">reste <span class="num">${fmt(made)}${unit(k)}/min</span> à amener</span>` : rec > EPS ? `<span class="rest">rien à amener</span>` : ""}</div>`;
   if (path.includes(k)) return `<div class="leaf">${lab}<span class="tag loop" data-tip="Cette pièce se consomme elle-même plus haut dans la chaîne : l'arbre s'arrête ici.">boucle</span></div>`;
   if (made <= EPS) return `<div class="leaf">${lab}<span class="rest">entièrement couvert, rien à fabriquer</span></div>`;
-  const R = D.recipes[r], n = made / perMin(r, k, "o"), open = depth < 2;
-  return `<details data-k="${k}" data-q="${made}" data-d="${depth}" data-p="${path.concat(k).join(",")}"${open ? " open" : ""}><summary><span class="row">${lab}<span class="num q">·</span>${mIcon(R.m)}<span class="num q">${fmt(n)} × ${esc(mName(R.m))}</span>${R.alt ? '<span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>' : ""}${rec > EPS ? `<span class="rest">pour les <span class="num">${fmt(made)}${unit(k)}/min</span> restants</span>` : ""}</span></summary>${open ? treeKids(k, made, depth, path.concat(k)) : ""}</details>`;
+  const R = D.recipes[r], n = made / perMin(r, k, "o"), p = path.concat(k).join(",");
+  const st = treeOpen.get(sc + "|" + p), open = st === undefined ? depth === 0 : st;   // by default only the first level below a tree is shown
+  return `<details data-k="${k}" data-q="${made}" data-d="${depth}" data-s="${sc}" data-p="${p}"${open ? " open" : ""}><summary><span class="row">${lab}<span class="num q">·</span>${mIcon(R.m)}<span class="num q">${fmt(n)} × ${esc(mName(R.m))}</span>${R.alt ? '<span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>' : ""}${rec > EPS ? `<span class="rest">pour les <span class="num">${fmt(made)}${unit(k)}/min</span> restants</span>` : ""}</span></summary>${open ? treeKids(k, made, depth, path.concat(k), sc) : ""}</details>`;
 }
-function treeKids(k, q, depth, path) {
+function treeKids(k, q, depth, path, sc) {
   const r = recipeOf(k), R = D.recipes[r], n = q / perMin(r, k, "o");
-  return R.i.map(([i, a]) => treeNode(i, a * 60 / R.t * n, depth + 1, path)).join("");
+  return R.i.map(([i, a]) => treeNode(i, a * 60 / R.t * n, depth + 1, path, sc)).join("");
 }
 function treesHtml(targets, P) {
   lastP = P;
-  return targets.map((t) => `<div class="tree">${treeNode(t.c, t.rate, 0, [])}</div>`).join(`<hr class="sep">`) +
+  return targets.map((t) => `<div class="tree">${treeNode(t.c, t.rate, 0, [], "t")}</div>`).join(`<hr class="sep">`) +
     `<p class="note">Les sous-produits récupérés sont déduits : une ligne indique ce qui est consommé et la part couverte par des sous-produits ; seul le reste est fabriqué. Dépliez une ligne pour remonter la chaîne.</p>`;
 }
 
@@ -728,8 +730,9 @@ document.addEventListener("focusout", (e) => {
 document.addEventListener("toggle", (e) => {
   const d = e.target;
   if (d.classList && d.classList.contains("others")) othersOpen = d.open;
+  if (d.tagName === "DETAILS" && d.dataset.p) treeOpen.set(d.dataset.s + "|" + d.dataset.p, d.open);
   if (d.tagName === "DETAILS" && d.open && d.dataset.k && !d.querySelector(":scope > details, :scope > .leaf")) {
-    d.insertAdjacentHTML("beforeend", treeKids(d.dataset.k, +d.dataset.q, +d.dataset.d, d.dataset.p.split(",")));
+    d.insertAdjacentHTML("beforeend", treeKids(d.dataset.k, +d.dataset.q, +d.dataset.d, d.dataset.p.split(","), d.dataset.s));
   }
 }, true);
 function fromHash() {
