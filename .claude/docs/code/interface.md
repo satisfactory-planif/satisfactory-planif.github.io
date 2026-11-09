@@ -1,7 +1,7 @@
 # Conventions d'interface
 
 - Interface entièrement en français, nombres au format français (virgule décimale).
-- Thèmes clair/sombre via variables CSS (`:root`, `prefers-color-scheme`, `data-theme`). Accent rouille (survol, sélection) ; jaune `--star` pour les recettes alternatives.
+- Thème sombre unique via les variables CSS de `:root` (`color-scheme: dark`), indépendant de la préférence du système. Accent rouille (survol, sélection) ; jaune `--star` pour les recettes alternatives.
 - Ombres de profondeur `--sh-1`, `--sh-2`, `--sh-btn`, `--sh-in`.
 - Saisie des débits : virgule (le point est converti), une seule virgule, 2 décimales max, 100 000 max ; un champ vidé reprend une valeur au blur. Temps : minutes + secondes entières, 2 h max.
 - Composants maison : infobulles interactives (`#tip`), menu de recettes (`#rmenu`), sélecteur de pièce (`#ipick`), toast, modale (`#modal`).
