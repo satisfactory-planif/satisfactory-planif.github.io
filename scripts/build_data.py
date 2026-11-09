@@ -1,7 +1,7 @@
-"""Build data.json from the game's own data files (CommunityResources/Docs).
+"""Build assets/data.json from the game's own data files (CommunityResources/Docs).
 
 Usage (from the repository root):
-    python3 scripts/build_data.py game-docs data.json
+    python3 scripts/build_data.py game-docs assets/data.json
 
 <game-docs> must contain en-US.json and fr.json, copied from
 <Satisfactory install>/CommunityResources/Docs/ (UTF-16 files).
@@ -12,7 +12,7 @@ What it does:
 - default ("std") recipe per item and the list of every recipe producing it ("opts")
 - items: en/fr names, fluid, raw resource, stack size, sink points, category, FICSMAS flag
 - categories come from scripts/categories.json; unknown new items go to "Autres" (edit the file to place them)
-- icons are NOT extracted from the game: the script only flags whether icons/<Item>.png exists
+- icons are NOT extracted from the game: the script only flags whether assets/images/items/<Item>.png exists
 """
 import json, os, re, sys
 from collections import defaultdict
@@ -106,7 +106,7 @@ for c in sorted(used):
         cat = 'FICSMAS (événement)' if EVENT.search(c) else 'Autres'
         new_items.append(c)
     rec = dict(en=it['mDisplayName'], fr=fr_name.get(c) or it['mDisplayName'], fl=fluid(c), raw=c in raw,
-               ico=os.path.exists(os.path.join(root, 'icons', c + '.png')),
+               ico=os.path.exists(os.path.join(root, 'assets', 'images', 'items', c + '.png')),
                sink=int(it.get('mResourceSinkPoints', '0') or 0), cat=cat, st=int(it.get('mCachedStackSize', '0') or 0))
     if cat.startswith('FICSMAS'):
         rec['ev'] = True
@@ -129,4 +129,4 @@ if new_items:
     print('New items placed by default, add them to scripts/categories.json:', ', '.join(new_items))
 missing = [c for c, i in items.items() if not i['ico']]
 if missing:
-    print('Items without icon (icons/<Item>.png missing):', ', '.join(missing))
+    print('Items without icon (assets/images/items/<Item>.png missing):', ', '.join(missing))

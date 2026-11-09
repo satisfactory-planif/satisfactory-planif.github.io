@@ -2,6 +2,7 @@
 // Usage (from the repository root): node tests/smoke.js
 // Needs Node and the "playwright" package (npm i -D playwright && npx playwright install chromium).
 const { spawn } = require("child_process");
+const fs = require("fs");
 const path = require("path");
 const { chromium } = require("playwright");
 
@@ -10,7 +11,7 @@ const PORT = 8765;
 const URL = `http://127.0.0.1:${PORT}/`;
 
 // Mon usine: goals (+ recipe choices), then the raw resources expected in "Ressources à amener" (per minute).
-// Every expected value is checked by hand from data.json (see README, "Tests").
+// Every expected value is checked by hand from data.json (see .claude/docs/projet/tests.md).
 const FACTORY_CASES = [
   { name: "Cadre modulaire lourd 2/min (recettes standard)", factory: [{ c: "Desc_ModularFrameHeavy_C", rate: 2 }],
     expect: { "Minerai de fer": 480, "Charbon": 180, "Calcaire": 180 } },
@@ -40,6 +41,8 @@ async function open(browser, storage, hash, viewport) {
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error") errors.push(m.text()); });
+  page.on("response", (r) => { if (r.status() >= 400) errors.push(`HTTP ${r.status()} ${r.url()}`); });
+  page.on("requestfailed", (r) => errors.push(`échec réseau ${r.url()}`));
   await page.addInitScript((s) => {
     localStorage.clear();
     for (const k in s) localStorage.setItem(k, JSON.stringify(s[k]));
@@ -48,7 +51,18 @@ async function open(browser, storage, hash, viewport) {
   return { page, errors };
 }
 
+// Every icon the page can show exists on disk (lazy-loaded images are not all requested during the test).
+function checkImages() {
+  const D = JSON.parse(fs.readFileSync(path.join(ROOT, "assets", "data.json"), "utf8"));
+  const img = (dir, c) => fs.existsSync(path.join(ROOT, "assets", "images", dir, c + ".png"));
+  const items = Object.keys(D.items).filter((c) => D.items[c].ico && !img("items", c));
+  const machines = Object.keys(D.machines).filter((m) => !img("machines", m));
+  check(!items.length, `Icônes d'objets (ico: true) présentes : ${items.length ? "manquantes " + items.join(", ") : "toutes"}`);
+  check(!machines.length, `Icônes de machines présentes : ${machines.length ? "manquantes " + machines.join(", ") : "toutes"}`);
+}
+
 (async () => {
+  checkImages();
   const server = spawn("python3", ["-m", "http.server", String(PORT), "--bind", "127.0.0.1"], { cwd: ROOT, stdio: "ignore" });
   await new Promise((r) => setTimeout(r, 800));
   const browser = await chromium.launch();

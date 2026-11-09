@@ -6,7 +6,7 @@ npx playwright install chromium
 npm test
 ```
 
-`tests/smoke.js` lance un serveur local et vérifie, sans erreur dans la console, des valeurs calculées à la main depuis `data.json` :
+`tests/smoke.js` lance un serveur local et vérifie, sans erreur dans la console, des valeurs calculées à la main depuis `assets/data.json` :
 
 | Cas | Attendu |
 |---|---|
@@ -16,5 +16,7 @@ npm test
 | Train, 1 400 minerai/min, aller-retour 4 min + arrêts | wagon 3 200 ÷ 4,9 min = 653,06/min → 3 wagons |
 | Lien `#usine:ModularFrameHeavy*2;IronIngot=Alternate_PureIronIngot` | 341,54 minerai ; « Partager » redonne le même lien ; une usine existante n'est remplacée qu'après confirmation |
 | Les trois vues à 390 px | aucun défilement horizontal |
+| Toutes les pages testées | aucune ressource en erreur HTTP (404…) ni échec réseau |
+| Icônes référencées par `data.json` (`ico`) et `machines` | fichier présent dans `assets/images/` |
 
 Tout nouveau calcul ajoute un cas ici et dans `tests/smoke.js`, avec le détail du calcul à la main.

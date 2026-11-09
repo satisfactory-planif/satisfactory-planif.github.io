@@ -15,7 +15,7 @@ Garder ces fichiers à jour avec le code ; ne pas remettre de détail technique 
 ## Règles de code
 
 - Pas de framework, pas de bundler, pas de dépendance d'exécution. Polices Google Fonts seulement.
-- Trois fichiers : `index.html` (structure), `style.css`, `app.js` (une IIFE, script classique). Pas de découpage supplémentaire (modules ES, plusieurs scripts) sans l'accord de l'utilisateur.
+- Trois fichiers de code : `index.html` (structure, à la racine), `assets/style.css`, `assets/app.js` (une IIFE, script classique) ; données et images dans `assets/`. Pas de découpage supplémentaire (modules ES, plusieurs scripts) sans l'accord de l'utilisateur.
 - Interface 100 % en français, noms officiels du jeu (`data.json` → `fr`). Nombres au format français (`fmt`, `fmtIn`, `parseNum`).
 - Couleurs uniquement via les variables CSS ; toute nouvelle variable doit exister en clair ET dans les deux blocs sombres (`prefers-color-scheme` et `[data-theme="dark"]`).
 - Saisies numériques : réutiliser la logique existante (virgule, 2 décimales, `MAX_RATE`, valeur restaurée au blur). Ne jamais re-rendre un champ en cours de frappe (le curseur saute) : mettre à jour seulement la zone de résultats (`updateResults`, `updateTransport`).
@@ -25,7 +25,7 @@ Garder ces fichiers à jour avec le code ; ne pas remettre de détail technique 
 
 ## Données
 
-- Ne pas modifier `data.json` à la main : passer par `scripts/build_data.py` (et `scripts/categories.json` pour les catégories).
+- Ne pas modifier `assets/data.json` à la main : passer par `scripts/build_data.py` (et `scripts/categories.json` pour les catégories).
 - `game-docs/` (fichiers du jeu) n'est jamais commité.
 - Une valeur de jeu absente des fichiers Docs (ex. capacités wagon/drone) se documente dans `docs/jeu/donnees.md` avec sa source.
 

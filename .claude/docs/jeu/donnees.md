@@ -1,4 +1,4 @@
-# Données du jeu (`data.json`)
+# Données du jeu (`assets/data.json`)
 
 Source : `<installation Satisfactory>/CommunityResources/Docs/en-US.json` et `fr.json` (UTF-16), fournis par le jeu. Copie locale dans `game-docs/`, jamais versionnée.
 
@@ -21,16 +21,16 @@ Source : `<installation Satisfactory>/CommunityResources/Docs/en-US.json` et `fr
 - **Puissance** des machines à puissance variable (accélérateur, convertisseur, encodeur) : `constante + facteur / 2` (moyenne).
 - Noms français : ceux du jeu (`fr.json`).
 - Catégories : `scripts/categories.json`. Un nouvel objet absent du fichier tombe dans « Autres » (ou FICSMAS si son nom correspond à `Xmas|CandyCane|Fireworks|Gift|Snow`) et le script le signale.
-- Les icônes ne sont pas extraites du jeu : elles viennent du projet [SatisfactoryTools](https://github.com/greeny/SatisfactoryTools). Un nouvel objet sans `icons/<Item>.png` est signalé.
+- Les icônes ne sont pas extraites du jeu : elles viennent du projet [SatisfactoryTools](https://github.com/greeny/SatisfactoryTools). Un nouvel objet sans `assets/images/items/<Item>.png` est signalé.
 
 ## Régénérer après une mise à jour du jeu
 
 ```bash
 cp "<Satisfactory>/CommunityResources/Docs/en-US.json" "<Satisfactory>/CommunityResources/Docs/fr.json" game-docs/
-python3 scripts/build_data.py game-docs data.json
+python3 scripts/build_data.py game-docs assets/data.json
 ```
 
-Avec les fichiers 1.2, le script reproduit `data.json` à l'identique (vérifié le 2026-11-09, même SHA-256).
+Avec les fichiers 1.2, le script reproduit `assets/data.json` à l'identique (vérifié le 2026-11-09, même SHA-256).
 
 ## Valeurs absentes des fichiers Docs
 

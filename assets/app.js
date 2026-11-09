@@ -31,12 +31,12 @@ const hashOf = (c) => c.toLowerCase().replace(/_/g, "-");
 const name = (c) => (D.items[c] ? D.items[c].fr : c);
 const unit = (c) => (D.items[c] && D.items[c].fl ? " m³" : "");
 const icon = (c, cls = "") => D.items[c] && D.items[c].ico
-  ? `<img class="ico ${cls}" src="icons/${c}.png" alt="" loading="lazy" width="64" height="64">`
+  ? `<img class="ico ${cls}" src="assets/images/items/${c}.png" alt="" loading="lazy" width="64" height="64">`
   : `<span class="ico ph ${cls}" aria-hidden="true"></span>`;
 const recipeOf = (c) => (Object.prototype.hasOwnProperty.call(choice, c) ? choice[c] || null : D.std[c] || null);
 const perMin = (r, c, side) => { const R = D.recipes[r]; const e = R[side].find((x) => x[0] === c); return e ? e[1] * 60 / R.t : 0; };
 const mName = (m) => D.machines[m] || m;
-const mIcon = (m) => `<img class="ico sm mico" src="machines/${m}.png" alt="" loading="lazy" width="64" height="64">`;
+const mIcon = (m) => `<img class="ico sm mico" src="assets/images/machines/${m}.png" alt="" loading="lazy" width="64" height="64">`;
 const fmtIn = (x) => String(+(+x).toFixed(2)).replace(".", ",");
 const round2 = (x) => Math.round(x * 100) / 100;
 const MAX_RATE = 100000;
@@ -1260,7 +1260,7 @@ document.addEventListener("pointerdown", (e) => { if (!inTip(e.target)) hideTip(
 document.addEventListener("scroll", hideTip, true);
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") hideTip(); });
 
-fetch("data.json").then((r) => r.json()).then((data) => {
+fetch("assets/data.json").then((r) => r.json()).then((data) => {
   D = data;
   for (const c in choiceF) if (choiceF[c] && !D.recipes[choiceF[c]]) delete choiceF[c];
   factory = factory.filter((f) => D.items[f.c] && f.rate >= 0);
