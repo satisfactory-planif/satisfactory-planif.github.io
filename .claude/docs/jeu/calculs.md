@@ -8,6 +8,11 @@
 - Étapes : la ligne d'une pièce affiche ce qui est fabriqué (sans la part récupérée) et son surplus. Le détail d'une étape liste sa « Destination » (« 225/min pour Lingot d'aluminium » : quantité d'abord, puis la pièce qu'elle alimente), puis ses sous-produits répartis au prorata (`byprodOf`) en « Surplus réutilisé » (part de `recovered`, consommée ailleurs dans la chaîne, suivie de ses consommateurs : `usedFor`, au prorata de `flows`) et « Surplus à évacuer » (part de `surplus`).
 - Arbres : nets des sous-produits (`netSplit`) : « dont X récupérés, sous-produit de … », le reste à fabriquer ou amener.
 
+## Fiche pièce (`rawLine`)
+
+- « Ressources brutes au total » d'une recette : seule la machine de la carte utilise cette recette. Ses entrées sont planifiées avec les recettes standard (`plan(entrées, given)`), et ses autres sorties sont déduites de leurs besoins (`given`). La pièce elle-même, si la chaîne la consomme plus bas, vient donc de sa recette standard ou du gisement. Sans cette règle, une recette qui donne la pièce en sous-produit bouclait (eau des Rebuts d'aluminium : la solution d'alumine consomme plus d'eau que la recette n'en rend).
+- Les recettes sont réparties en « Autres recettes » (la pièce est la sortie principale) et « Obtenu en sous-produit » (recettes d'autres pièces qui la donnent aussi).
+
 ## Transport
 
 - Wagon : 32 emplacements × taille de pile ; wagon fluide 1 600 m³ (sources : [donnees.md](donnees.md)).

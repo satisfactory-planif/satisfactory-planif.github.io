@@ -73,10 +73,10 @@ function needs(c, x, stack = []) {
 }
 
 /* ---------- planner: targets -> net production, with by-product recovery ---------- */
-function plan(targets) {
+function plan(targets, given = {}) {   // given: extra supply from outside the chain (by-products of a recipe card)
   let produce = {}, res = null, converged = false;
   for (let it = 0; it < 400; it++) {
-    const demand = {}, supply = {}, mach = {}, supplyBy = {};
+    const demand = {}, supply = { ...given }, mach = {}, supplyBy = {};
     for (const t of targets) demand[t.c] = (demand[t.c] || 0) + t.rate;
     for (const c in produce) {
       const q = produce[c];
@@ -488,9 +488,14 @@ function speedTag(c, r) {             // machine output compared with the standa
   return ` <span class="tag ${up ? "ok" : "loop"}" data-tip="Une machine produit ${fmt(k)} fois ${up ? "plus" : "moins"} qu'avec la recette standard (${fmt(outOf(c, std))}${unit(c)}/min)">×${fmt(k)} par machine</span>`;
 }
 function rawLine(c, r) {              // raw resources for 1 part (or 1 machine), sub-parts in standard recipes
-  const prev = choice; choice = { [c]: r }; lvlMemo = {}; needMemo = {};
-  const q = qMode === "unit" ? 1 : outOf(c, r);
-  const P = plan([{ c, rate: q }]);
+  /* Only this machine uses recipe r: its inputs are planned with the standard recipes, its other outputs offset
+     their needs. Planning c itself with r would loop when r's own chain consumes c (water as a by-product of
+     Rebuts d'aluminium or Batterie: the alumina solution needs more water than the recipe gives back). */
+  const R = D.recipes[r], n = (qMode === "unit" ? 1 : outOf(c, r)) / outOf(c, r), f = 60 / R.t * n;
+  const given = {};
+  for (const [o, a] of R.o) if (o !== c) given[o] = (given[o] || 0) + a * f;
+  const prev = choice; choice = {}; lvlMemo = {}; needMemo = {};
+  const P = plan(R.i.map(([i, a]) => ({ c: i, rate: a * f })), given);
   choice = prev; lvlMemo = {}; needMemo = {};
   const raws = Object.keys(P.raw).sort((a, b) => P.raw[b] - P.raw[a]);
   if (!raws.length) return "";
