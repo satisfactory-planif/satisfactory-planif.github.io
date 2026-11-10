@@ -209,6 +209,19 @@ function checkImages() {
       });
       const want = ["3 m³ Eau", "2 Bauxite", "1 Charbon"];
       check(JSON.stringify(raws) === JSON.stringify(want), `Fiche Eau · Rebuts d'aluminium, ressources brutes pour 1 m³ : attendu ${JSON.stringify(want)}, obtenu ${JSON.stringify(raws)}`);
+      // an unfolded group stays open through Mon usine and back, and folds again on another part's sheet
+      const bypOpen = () => page.$eval('details.others[data-grp="byp"]', (d) => d.open);
+      await page.click('details.others[data-grp="byp"] > summary');
+      await page.click('.modes [data-view="factory"]');
+      await page.click('.modes [data-view="item"]');
+      await page.waitForSelector('details.others[data-grp="byp"]', { timeout: 10000 });
+      const kept = await bypOpen();
+      await page.evaluate(() => { location.hash = "#desc-aluminumscrap-c"; });
+      await page.waitForFunction(() => /Rebuts/.test(document.querySelector(".sheet h2")?.textContent || ""), null, { timeout: 10000 });
+      await page.evaluate(() => { location.hash = "#desc-water-c"; });
+      await page.waitForFunction(() => document.querySelector(".sheet h2")?.textContent === "Eau", null, { timeout: 10000 });
+      const again = await bypOpen();
+      check(kept === true && again === false, `Fiche Eau · section dépliée gardée après Mon usine (${kept}), refermée après une autre fiche (${again})`);
       if (errors.length) check(false, `Fiche Eau · erreurs JS : ${errors.join(" | ")}`);
       await page.close();
     }

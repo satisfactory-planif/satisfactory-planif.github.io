@@ -625,6 +625,7 @@ function render() {
 function setHash(h) { try { if (location.hash !== "#" + h) history.replaceState(null, "", "#" + h); } catch (e) {} }
 function select(c) {
   if (!D.items[c]) return;
+  if (c !== sel) othersOpen.main = othersOpen.byp = false;   // another part: its recipe groups start folded (kept when coming back from Mon usine or Transport)
   sel = c; view = "item"; useChoices();
   store.set("sp-sel", c); store.set("sp-view", view);
   setHash(hashOf(c));
