@@ -136,6 +136,33 @@ function checkImages() {
       await page.close();
     }
 
+    // "Importer": the link is checked in the field and again on "Importer", then the same flow as a link opened in the address bar.
+    {
+      const { page, errors } = await open(browser, { "sp-factory": [{ c: "Desc_IronPlate_C", rate: 30 }] }, "#usine");
+      await page.waitForSelector("[data-import]", { timeout: 10000 });
+      await page.click("[data-import]");
+      const msg = () => page.$eval("#import-msg", (e) => (e.classList.contains("bad") ? "erreur : " : "ok : ") + e.textContent);
+      await page.click("#modal [data-maction]");
+      const m0 = await msg();
+      await page.fill("#import-url", "https://exemple.fr/#accueil");
+      const m1 = await msg();
+      await page.fill("#import-url", "  https://satisfactory-planif.github.io/#usine:ModularFrameHeavy*2;IronIngot=Alternate_PureIronIngot  ");
+      const m2 = await msg();
+      check(/^erreur : Collez/.test(m0) && /^erreur : Ce n'est pas un lien d'usine/.test(m1) && m2 === "ok : Lien valide : 1 pièce (Cadre modulaire lourd).",
+        `Importer · contrôle du lien : « ${m0} » / « ${m1} » / « ${m2} »`);
+      await page.click("#modal [data-maction]");
+      await page.waitForSelector("#mtitle", { timeout: 10000 });
+      const title = await page.$eval("#mtitle", (e) => e.textContent);
+      await page.click("#modal [data-maction]");
+      await page.waitForSelector(".raws .raw", { timeout: 10000 });
+      const goals = await page.$$eval(".goal .g-name", (els) => els.map((e) => e.textContent.trim()).join());
+      const ore = await page.$$eval(".raws .raw", (els) => els.find((e) => e.querySelector("button.link")?.textContent.trim() === "Minerai de fer")?.querySelector("b").textContent);
+      check(title === "Ouvrir l'usine partagée ?" && goals === "Cadre modulaire lourd" && ore && Math.abs(num(ore) - 341.54) < 0.01,
+        `Importer · confirmation puis remplacement : « ${title} », ${goals}, minerai de fer ${ore}`);
+      if (errors.length) check(false, `Importer · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+    }
+
     // Trees: only the first level below is unfolded by default, and a click changes only the clicked node,
     // even when another step's detail is unfolded afterwards (the results are re-rendered then).
     {

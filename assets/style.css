@@ -229,6 +229,10 @@ tr.flash > td { animation: rowFlash 1.6s ease-out; }
 .mbody p { margin: 0 0 8px; }
 .head > .hbtns { flex: 0 0 auto; display: flex; flex-wrap: wrap; gap: 8px; }
 .share-url { width: 100%; background: var(--sunk); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: 14px var(--mono); color: var(--ink); }
+.imrow { display: flex; gap: 8px; }
+.imrow .share-url { flex: 1; min-width: 0; }
+.immsg { min-height: 1.4em; margin: 8px 0 0 !important; font-size: 14px; color: var(--ok); }
+.immsg.bad { color: var(--warn); }
 .mlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .mrow { display: flex; gap: 10px; align-items: flex-start; background: var(--sunk); border-radius: 6px; padding: 8px 10px; }
 .mcmp { display: grid; gap: 2px; font-size: 14px; color: var(--muted); margin-top: 2px; }

@@ -567,11 +567,11 @@ function renderFactory() {
     return h + `<div class="card"><section>
       <h2 style="font-size:34px">Mon usine</h2>
       <p class="lede">Votre usine est vide. Ajoutez les pièces que vous voulez produire avec le bouton ci-dessous, ou avec le « + » qui apparaît au survol d'une pièce dans le catalogue. Les pièces intermédiaires communes sont regroupées et les sous-produits réutilisés.</p>
-      <button class="btn primary addgoal" data-addline="1" aria-haspopup="listbox" style="margin-top:14px">+ Ajouter une pièce</button>
+      <div class="hbtns" style="margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px"><button class="btn primary addgoal" data-addline="1" aria-haspopup="listbox">+ Ajouter une pièce</button><button class="btn" data-import="1">Importer une usine</button></div>
     </section></div>`;
   }
   h += `<div class="card"><section class="head"><div><div class="eyebrow">${factory.length} pièce${factory.length > 1 ? "s" : ""} demandée${factory.length > 1 ? "s" : ""}</div><h2>Mon usine</h2></div>
-      <div class="hbtns"><button class="btn" data-share="1">Partager</button><button class="btn" data-clear="1">Vider l'usine</button></div></section>
+      <div class="hbtns"><button class="btn" data-share="1">Partager</button><button class="btn" data-import="1">Importer</button><button class="btn" data-clear="1">Vider l'usine</button></div></section>
     <section><div class="goals">` +
     factory.map((f, i) => `<div class="goal" id="goalrow-${f.c}">${icon(f.c)}<div class="g-name"><button class="link" data-pick="${f.c}">${esc(name(f.c))}</button></div>
         <div class="g-recipe">${recipeSelect(f.c, "goal-r-" + f.c)}</div>
@@ -700,6 +700,7 @@ document.addEventListener("click", (e) => {
   const rm = e.target.closest("[data-remove]");
   if (rm) { factory.splice(+rm.dataset.remove, 1); pruneFactoryChoices(); saveFactory(); render(); return; }
   if (e.target.closest("[data-share]")) { shareFactory(); return; }
+  if (e.target.closest("[data-import]")) { importFactory(); return; }
   if (e.target.closest("[data-clear]")) {
     const n = factory.length, k = Object.keys(choiceF).length;
     openModal({
@@ -844,8 +845,8 @@ function shareFactory() {
   if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(() => toast("Lien de partage copié dans le presse-papiers."), manual);
   else manual();
 }
-function openShared() {
-  const S = parseShare(location.hash.slice(1));
+function openShared() { applyShared(parseShare(location.hash.slice(1))); }
+function applyShared(S) {                // same checks for a link opened in the address bar and for "Importer"
   showFactory();                          // replaces the address with #usine: a reload keeps the local factory
   if (!S) { toast("Ce lien de partage ne contient aucune pièce reconnue."); return; }
   const n = S.goals.length;
@@ -857,10 +858,51 @@ function openShared() {
     toast(`Usine partagée ouverte : ${n} pièce${n > 1 ? "s" : ""}.`);
   };
   if (!factory.length) return apply();
-  if (shareCode(factory, choiceF) === shareCode(S.goals, S.choices)) return;   // already this factory
+  if (shareCode(factory, choiceF) === shareCode(S.goals, S.choices)) { toast("Votre usine est déjà celle de ce lien."); return; }
   openModal({ title: "Ouvrir l'usine partagée ?", inline: true,
     body: `<p>Le lien contient ${n} pièce${n > 1 ? "s" : ""} : ${S.goals.map((f) => esc(name(f.c))).join(", ")}.</p><p>${factory.length > 1 ? `Les ${factory.length} pièces` : "La pièce"} de votre usine et vos recettes choisies seront remplacées. Cette action ne peut pas être annulée.</p>`,
     actions: [{ label: "Remplacer mon usine", kind: "danger", run: apply }] });
+}
+
+/* "Importer": paste a share link in a dialog, checked while typing and again on "Importer" */
+function shareFromText(t) {             // { S } for a valid link, { err } otherwise
+  t = String(t || "").trim();
+  if (!t) return { err: "Collez le lien de partage d'une usine." };
+  const i = t.indexOf("#" + SHARE), code = (i >= 0 ? t.slice(i + 1) : t.startsWith(SHARE) ? t : "").split(/\s/)[0];
+  if (!code) return { err: "Ce n'est pas un lien d'usine : il doit contenir « #usine: »." };
+  const S = parseShare(code);
+  return S ? { S } : { err: "Ce lien ne contient aucune pièce reconnue." };
+}
+function importFactory() {
+  const canPaste = !!(navigator.clipboard && navigator.clipboard.readText && window.isSecureContext);
+  let S = null;
+  openModal({ title: "Importer une usine", inline: true,
+    body: `<p>Collez le lien obtenu avec « Partager ». Il remplace les pièces, débits et recettes choisies de votre usine.</p>
+      <div class="imrow"><input class="share-url" id="import-url" type="text" autocomplete="off" spellcheck="false" placeholder="https://…#usine:…" aria-label="Lien de partage" aria-describedby="import-msg">${canPaste ? '<button class="btn" type="button" id="import-paste">Coller</button>' : ""}</div>
+      <p class="immsg" id="import-msg" aria-live="polite"></p>`,
+    actions: [{ label: "Importer", kind: "primary", check: () => !!(S = checkImport(true)), run: () => applyShared(S) }] });   // run comes after the dialog is closed
+  const inp = document.getElementById("import-url");
+  inp.focus();
+  inp.addEventListener("input", () => checkImport(false));
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); modal.querySelector("[data-maction]").click(); } });
+  const paste = document.getElementById("import-paste");
+  if (paste) paste.addEventListener("click", () => navigator.clipboard.readText().then((t) => { inp.value = t.trim(); checkImport(true); inp.focus(); },
+    () => { showImportMsg("Le presse-papiers n'est pas accessible : collez le lien avec Ctrl+V.", true); inp.focus(); }));
+}
+function showImportMsg(txt, bad) {
+  const m = document.getElementById("import-msg"), inp = document.getElementById("import-url");
+  if (m) { m.textContent = txt; m.classList.toggle("bad", !!bad); }
+  if (inp) { inp.classList.toggle("bad", !!bad); inp.setAttribute("aria-invalid", bad ? "true" : "false"); }
+}
+function checkImport(strict) {           // the parsed link, or null; strict: on "Importer" or "Coller", an empty field is an error too
+  const inp = document.getElementById("import-url");
+  if (!inp) return null;
+  if (!strict && !inp.value.trim()) { showImportMsg("", false); return null; }
+  const { S, err } = shareFromText(inp.value);
+  if (err) { showImportMsg(err, true); if (strict) inp.focus(); return null; }
+  const n = S.goals.length;
+  showImportMsg(`Lien valide : ${n} pièce${n > 1 ? "s" : ""} (${S.goals.map((f) => name(f.c)).join(", ")}).`, false);
+  return S;
 }
 
 /* ---------- adding parts to the factory ---------- */
@@ -1262,13 +1304,13 @@ function closeModal() {
 }
 modal.addEventListener("click", (e) => {
   const a = e.target.closest("[data-maction]");
-  if (a) { const act = modal._actions[+a.dataset.maction]; closeModal(); act.run(); return; }
+  if (a) { const act = modal._actions[+a.dataset.maction]; if (act.check && !act.check()) return; closeModal(); act.run(); return; }
   if (e.target.closest("[data-mclose]")) closeModal();
 });
 modal.addEventListener("keydown", (e) => {
   if (e.key === "Escape") { e.stopPropagation(); closeModal(); return; }
   if (e.key === "Tab") {            // keep focus inside the dialog
-    const f = [...modal.querySelectorAll("button")];
+    const f = [...modal.querySelectorAll("button, input")];
     const i = f.indexOf(document.activeElement);
     if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
     else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
