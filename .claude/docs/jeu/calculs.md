@@ -11,7 +11,7 @@
 ## Fiche pièce (`rawLine`)
 
 - « Ressources brutes au total » d'une recette : seule la machine de la carte utilise cette recette. Ses entrées sont planifiées avec les recettes standard (`plan(entrées, given)`), et ses autres sorties sont déduites de leurs besoins (`given`). La pièce elle-même, si la chaîne la consomme plus bas, vient donc de sa recette standard ou du gisement. Sans cette règle, une recette qui donne la pièce en sous-produit bouclait (eau des Rebuts d'aluminium : la solution d'alumine consomme plus d'eau que la recette n'en rend).
-- Les recettes sont réparties en « Autres recettes » (la pièce est la sortie principale) et « Obtenu en sous-produit » (recettes d'autres pièces qui la donnent aussi).
+- Les recettes sont réparties en « Autres recettes » (la pièce est la sortie principale) et « Obtenu en sous-produit » (recettes d'autres pièces qui la donnent aussi). Les deux sections sont fermées par défaut (état gardé en mémoire le temps de la visite, `othersOpen`) ; l'étiquette Alt. est sur chaque recette alternative, pas sur le titre de section.
 
 ## Transport
 

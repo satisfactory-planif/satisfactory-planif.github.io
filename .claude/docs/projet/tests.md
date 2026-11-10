@@ -19,7 +19,7 @@ npm test
 | Arbres de Cadre modulaire lourd 2/min (onglet Arbres et détail d'une étape) | seul le premier niveau est déplié ; un clic ne change que le nœud cliqué, y compris après le dépliage d'une autre étape (re-rendu des résultats) |
 | Lingot d'aluminium 150/min, détail de l'étape Solution d'alumine | 225 rebuts → 150 solution d'alumine → 150 × 50/120 = 62,5 silice réutilisée : « Destination : 150 m³/min pour Rebuts d'aluminium » et « Surplus réutilisé : Silice +62,5/min pour Lingot d'aluminium » ; la ligne Silice affiche 125/min (187,5 − 62,5), sans « récupérés » |
 | Arbre de Lingot d'aluminium 150/min à 390 px, Rebuts d'aluminium déplié | aucune ligne longue ne laisse le triangle seul sur sa ligne ; l'icône de machine reste sur la ligne de son nombre ; les entrées des Rebuts (Solution d'alumine, dépliable, et Charbon, brut) ont leurs icônes alignées |
-| Fiche Eau, pour 1 m³ | groupes « Autres recettes · 1 » et « Obtenu en sous-produit · 7 » ; Rebuts d'aluminium (240 solution + 120 charbon → 360 rebuts + 120 eau) : 2 solution d'alumine + 1 charbon par m³, soit 2 bauxite + 3 m³ d'eau + 1 charbon (plus de valeurs qui explosent) |
+| Fiche Eau, pour 1 m³ | groupes « Autres recettes · 1 » et « Obtenu en sous-produit · 7 », fermés, sans Alt. dans leur titre ; Alt. sur les 4 recettes alternatives ; Rebuts d'aluminium (240 solution + 120 charbon → 360 rebuts + 120 eau) : 2 solution d'alumine + 1 charbon par m³, soit 2 bauxite + 3 m³ d'eau + 1 charbon (plus de valeurs qui explosent) |
 | Les trois vues à 390 px | aucun défilement horizontal |
 | Toutes les pages testées | aucune ressource en erreur HTTP (404…) ni échec réseau |
 | Icônes référencées par `data.json` (`ico`) et `machines` | fichier présent dans `assets/images/` |

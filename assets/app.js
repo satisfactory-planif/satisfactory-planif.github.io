@@ -534,9 +534,10 @@ function renderItem() {
   h += `</section>`;
   // recipes whose main output is c, then recipes of other parts that also give c (by-product)
   const mains = others.filter((x) => D.recipes[x].o[0][0] === c), byps = others.filter((x) => D.recipes[x].o[0][0] !== c);
-  const group = (grp, list, title, open, note) => `<section><details class="others" data-grp="${grp}"${open ? " open" : ""}><summary><h3 class="uh" style="display:inline">${title} · ${list.length}</h3>${list.some((x) => D.recipes[x].alt) ? ' <span class="tag alt" data-tip="Contient des recettes alternatives, débloquées avec un disque dur" style="vertical-align:4px;margin-left:6px">Alt.</span>' : ""}</summary>${note}<div class="rcards">${list.map((x) => recipeCard(c, x)).join("")}</div></details></section>`;
-  if (mains.length) h += group("main", mains, "Autres recettes", !r || othersOpen.main, "");
-  if (byps.length) h += group("byp", byps, "Obtenu en sous-produit", othersOpen.byp || (!r && !mains.length),
+  // folded by default; the Alt. tag stays on each recipe card, not on the group title
+  const group = (grp, list, title, note) => `<section><details class="others" data-grp="${grp}"${othersOpen[grp] ? " open" : ""}><summary><h3 class="uh" style="display:inline">${title} · ${list.length}</h3></summary>${note}<div class="rcards">${list.map((x) => recipeCard(c, x)).join("")}</div></details></section>`;
+  if (mains.length) h += group("main", mains, "Autres recettes", "");
+  if (byps.length) h += group("byp", byps, "Obtenu en sous-produit",
     `<p class="note">Recettes d'autres pièces, qui en donnent aussi. Les quantités suivent le choix « Pour 1 ${D.items[c].fl ? "m³" : "pièce"} / Pour 1 machine » ci-dessus.</p>`);
   h += `</div>`;
   tab = tabI;
