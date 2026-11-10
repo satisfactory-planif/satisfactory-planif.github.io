@@ -197,9 +197,12 @@ function checkImages() {
     // and the 2 alumina (120 bauxite + 180 water → 120 alumina) need 2 bauxite + 3 water, in standard recipes.
     {
       const { page, errors } = await open(browser, { "sp-qmode": "unit" }, "#desc-water-c");
-      await page.waitForSelector(".rcard", { timeout: 10000 });
-      const groups = await page.$$eval("details.others > summary h3", (els) => els.map((e) => e.textContent.trim()));
-      check(JSON.stringify(groups) === JSON.stringify(["Autres recettes · 1", "Obtenu en sous-produit · 7"]), `Fiche Eau · groupes de recettes : ${JSON.stringify(groups)}`);
+      await page.waitForSelector("details.others > summary", { timeout: 10000 });
+      // both groups folded by default, no Alt. tag on their title (it stays on each alternative recipe card)
+      const groups = await page.$$eval("details.others", (ds) => ds.map((d) => d.querySelector("summary").textContent.replace(/\s+/g, " ").trim() + (d.open ? " (ouvert)" : "")));
+      check(JSON.stringify(groups) === JSON.stringify(["Autres recettes · 1", "Obtenu en sous-produit · 7"]), `Fiche Eau · groupes de recettes, fermés, sans Alt. : ${JSON.stringify(groups)}`);
+      const alts = await page.$$eval('details.others[data-grp="byp"] .rcard .rc-head .tag.alt', (els) => els.length);
+      check(alts === 4, `Fiche Eau · étiquette Alt. sur les 4 recettes alternatives : ${alts}`);
       const raws = await page.$$eval('details.others[data-grp="byp"] .rcard', (cards) => {
         const c = cards.find((x) => x.querySelector("b").textContent === "Rebuts d'aluminium");
         return c ? [...c.querySelectorAll(".rc-raw .chip")].map((x) => x.querySelector(".num").textContent.trim() + " " + x.textContent.replace(x.querySelector(".num").textContent, "").trim()) : null;
