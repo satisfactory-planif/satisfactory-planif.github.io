@@ -141,15 +141,21 @@ function checkImages() {
       const { page, errors } = await open(browser, { "sp-factory": [{ c: "Desc_IronPlate_C", rate: 30 }] }, "#usine");
       await page.waitForSelector("[data-import]", { timeout: 10000 });
       await page.click("[data-import]");
-      const msg = () => page.$eval("#import-msg", (e) => (e.classList.contains("bad") ? "erreur : " : "ok : ") + e.textContent);
-      await page.click("#modal [data-maction]");
-      const m0 = await msg();
-      await page.fill("#import-url", "https://exemple.fr/#accueil");
-      const m1 = await msg();
-      await page.fill("#import-url", "  https://satisfactory-planif.github.io/#usine:ModularFrameHeavy*2;IronIngot=Alternate_PureIronIngot  ");
-      const m2 = await msg();
-      check(/^erreur : Collez/.test(m0) && /^erreur : Ce n'est pas un lien d'usine/.test(m1) && m2 === "ok : Lien valide : 1 pièce (Cadre modulaire lourd).",
-        `Importer · contrôle du lien : « ${m0} » / « ${m1} » / « ${m2} »`);
+      // message and state of the "Importer" button after each entry: disabled until the link is valid
+      const state = () => page.evaluate(() => {
+        const m = document.getElementById("import-msg"), b = document.querySelector("#modal [data-maction]");
+        return `${b.disabled ? "désactivé" : "actif"} · ${m.classList.contains("bad") ? "erreur : " : ""}${m.textContent}`;
+      });
+      const steps = [["", /^désactivé · $/],
+        ["https://satisfactory-planif.github.io/#usine", /^désactivé · erreur : Ce lien ne contient aucune pièce : c'est l'adresse de Mon usine/],
+        ["https://exemple.fr/#accueil", /^désactivé · erreur : Ce lien ne correspond pas à une usine partagée/],
+        ["#usine:Inconnu*3", /^désactivé · erreur : Aucune pièce de ce lien n'est reconnue/],
+        ["  https://satisfactory-planif.github.io/#usine:ModularFrameHeavy*2;IronIngot=Alternate_PureIronIngot  ", /^actif · Lien valide : 1 pièce \(Cadre modulaire lourd\)\.$/]];
+      for (const [v, want] of steps) {
+        if (v) await page.fill("#import-url", v);
+        const got = await state();
+        check(want.test(got), `Importer · « ${v.trim() || "(vide)"} » → ${got}`);
+      }
       await page.click("#modal [data-maction]");
       await page.waitForSelector("#mtitle", { timeout: 10000 });
       const title = await page.$eval("#mtitle", (e) => e.textContent);
