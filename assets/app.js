@@ -19,7 +19,7 @@ function saveChoice() { store.set("sp-choice-f", choiceF); }
 let factory = store.get("sp-factory", []);   // [{c, rate}]
 let sel = null;
 let view = "item";                           // "item" | "factory"
-let othersOpen = false;
+const othersOpen = { main: false, byp: false };   // item sheet: "Autres recettes" / "Obtenu en sous-produit" unfolded
 let qMode = store.get("sp-qmode", "unit");   // "unit" = for 1 part, "machine" = per minute for 1 machine
 let tab = "uses", tabI = store.get("sp-tab-i", "uses"), tabF = store.get("sp-tab-f", "steps");
 let flash = "";
@@ -503,9 +503,9 @@ function rawLine(c, r) {              // raw resources for 1 part (or 1 machine)
     `<button class="chip" data-pick="${x}">${icon(x, "sm")}<span class="num qn">${fmt(P.raw[x])}${unit(x)}${qMode === "unit" ? "" : "/min"}</span>${esc(name(x))}</button>`).join("")}</div></div>`;
 }
 function recipeCard(c, r) {
-  const R = D.recipes[r], byp = R.o.filter(([o]) => o !== c), main = R.o[0][0] === c;
+  const R = D.recipes[r], byp = R.o.filter(([o]) => o !== c);
   const tag = R.alt ? '<span class="tag alt" data-tip="Recette alternative, débloquée avec un disque dur">Alt.</span>'
-    : r === D.std[c] ? '<span class="tag std">Standard</span>' : !main ? '<span class="tag raw">Sous-produit</span>' : "";
+    : r === D.std[c] ? '<span class="tag std">Standard</span>' : "";
   return `<div class="rcard${R.alt ? " alt" : ""}">
     <div class="rc-head">${tag}<b>${esc(recipeLabel(c, r).name)}</b><span class="rc-mach">${mIcon(R.m)}${esc(mName(R.m))} · 1 machine produit <span class="num">${outTxt(c, r)}</span>${speedTag(c, r)}</span></div>
     <div class="rc-flow"><div class="chips">${qChips(c, r, R.i)}</div>${byp.length ? `<div class="rc-byp"><span>Produit aussi :</span><div class="chips">${qChips(c, r, byp)}</div></div>` : ""}${rawLine(c, r)}</div>
@@ -532,7 +532,12 @@ function renderItem() {
   } else if (it.raw) h += `<p class="note" style="margin:0">Ressource brute : elle s'extrait d'un gisement et ne se fabrique dans aucune machine.</p>`;
   else h += `<p class="note" style="margin:0">Aucune recette standard : ${others.length ? "elle ne s'obtient qu'avec les recettes ci-dessous." : "elle ne se fabrique pas en machine."}</p>`;
   h += `</section>`;
-  if (others.length) h += `<section><details class="others"${r && !othersOpen ? "" : " open"}><summary><h3 class="uh" style="display:inline">Autres recettes · ${others.length}</h3>${others.some((x) => D.recipes[x].alt) ? ' <span class="tag alt" data-tip="Contient des recettes alternatives, débloquées avec un disque dur" style="vertical-align:4px;margin-left:6px">Alt.</span>' : ""}</summary><div class="rcards">${others.map((x) => recipeCard(c, x)).join("")}</div></details></section>`;
+  // recipes whose main output is c, then recipes of other parts that also give c (by-product)
+  const mains = others.filter((x) => D.recipes[x].o[0][0] === c), byps = others.filter((x) => D.recipes[x].o[0][0] !== c);
+  const group = (grp, list, title, open, note) => `<section><details class="others" data-grp="${grp}"${open ? " open" : ""}><summary><h3 class="uh" style="display:inline">${title} · ${list.length}</h3>${list.some((x) => D.recipes[x].alt) ? ' <span class="tag alt" data-tip="Contient des recettes alternatives, débloquées avec un disque dur" style="vertical-align:4px;margin-left:6px">Alt.</span>' : ""}</summary>${note}<div class="rcards">${list.map((x) => recipeCard(c, x)).join("")}</div></details></section>`;
+  if (mains.length) h += group("main", mains, "Autres recettes", !r || othersOpen.main, "");
+  if (byps.length) h += group("byp", byps, "Obtenu en sous-produit", othersOpen.byp || (!r && !mains.length),
+    `<p class="note">Recettes d'autres pièces, qui en donnent aussi. Les quantités suivent le choix « Pour 1 ${D.items[c].fl ? "m³" : "pièce"} / Pour 1 machine » ci-dessus.</p>`);
   h += `</div>`;
   tab = tabI;
   const tabs = [["uses", "Utilisé dans"], ["without", "Sans cette pièce"]];
@@ -750,7 +755,7 @@ document.addEventListener("focusout", (e) => {
 });
 document.addEventListener("toggle", (e) => {
   const d = e.target;
-  if (d.classList && d.classList.contains("others")) othersOpen = d.open;
+  if (d.classList && d.classList.contains("others")) othersOpen[d.dataset.grp] = d.open;
   if (d.tagName === "DETAILS" && d.dataset.p) treeOpen.set(d.dataset.s + "|" + d.dataset.p, d.open);
   if (d.tagName === "DETAILS" && d.open && d.dataset.k && !d.querySelector(":scope > details, :scope > .leaf")) {
     d.insertAdjacentHTML("beforeend", treeKids(d.dataset.k, +d.dataset.q, +d.dataset.d, d.dataset.p.split(","), d.dataset.s));

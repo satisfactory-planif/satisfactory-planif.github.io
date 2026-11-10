@@ -192,6 +192,24 @@ function checkImages() {
       await page.close();
     }
 
+    // Item sheet of Water: recipes giving water as a by-product sit in their own group, and their raw totals no longer
+    // loop. Rebuts d'aluminium (240 alumina + 120 coal → 360 scrap + 120 water), per 1 m³ of water: 2 alumina + 1 coal,
+    // and the 2 alumina (120 bauxite + 180 water → 120 alumina) need 2 bauxite + 3 water, in standard recipes.
+    {
+      const { page, errors } = await open(browser, { "sp-qmode": "unit" }, "#desc-water-c");
+      await page.waitForSelector(".rcard", { timeout: 10000 });
+      const groups = await page.$$eval("details.others > summary h3", (els) => els.map((e) => e.textContent.trim()));
+      check(JSON.stringify(groups) === JSON.stringify(["Autres recettes · 1", "Obtenu en sous-produit · 7"]), `Fiche Eau · groupes de recettes : ${JSON.stringify(groups)}`);
+      const raws = await page.$$eval('details.others[data-grp="byp"] .rcard', (cards) => {
+        const c = cards.find((x) => x.querySelector("b").textContent === "Rebuts d'aluminium");
+        return c ? [...c.querySelectorAll(".rc-raw .chip")].map((x) => x.querySelector(".num").textContent.trim() + " " + x.textContent.replace(x.querySelector(".num").textContent, "").trim()) : null;
+      });
+      const want = ["3 m³ Eau", "2 Bauxite", "1 Charbon"];
+      check(JSON.stringify(raws) === JSON.stringify(want), `Fiche Eau · Rebuts d'aluminium, ressources brutes pour 1 m³ : attendu ${JSON.stringify(want)}, obtenu ${JSON.stringify(raws)}`);
+      if (errors.length) check(false, `Fiche Eau · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+    }
+
     // Trees at 390 px: a long line wraps without leaving the fold marker alone on its line,
     // and the machine icon stays on the same line as its count.
     {
