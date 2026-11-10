@@ -868,10 +868,12 @@ function applyShared(S) {                // same checks for a link opened in the
 function shareFromText(t) {             // { S } for a valid link, { err } otherwise
   t = String(t || "").trim();
   if (!t) return { err: "Collez le lien de partage d'une usine." };
+  const how = " Copiez le lien avec le bouton « Partager » de Mon usine.";
   const i = t.indexOf("#" + SHARE), code = (i >= 0 ? t.slice(i + 1) : t.startsWith(SHARE) ? t : "").split(/\s/)[0];
-  if (!code) return { err: "Ce n'est pas un lien d'usine : il doit contenir « #usine: »." };
+  // "…/#usine" (or "#usine:" with nothing after): the page of Mon usine, not a shared factory
+  if (!code || !code.slice(SHARE.length).trim()) return { err: (/#usine\b/.test(t) ? "Ce lien ne contient aucune pièce : c'est l'adresse de Mon usine, sans usine partagée." : "Ce lien ne correspond pas à une usine partagée.") + how };
   const S = parseShare(code);
-  return S ? { S } : { err: "Ce lien ne contient aucune pièce reconnue." };
+  return S ? { S } : { err: "Aucune pièce de ce lien n'est reconnue : il est peut-être incomplet ou abîmé." + how };
 }
 function importFactory() {
   const canPaste = !!(navigator.clipboard && navigator.clipboard.readText && window.isSecureContext);
@@ -880,19 +882,21 @@ function importFactory() {
     body: `<p>Collez le lien obtenu avec « Partager ». Il remplace les pièces, débits et recettes choisies de votre usine.</p>
       <div class="imrow"><input class="share-url" id="import-url" type="text" autocomplete="off" spellcheck="false" placeholder="https://…#usine:…" aria-label="Lien de partage" aria-describedby="import-msg">${canPaste ? '<button class="btn" type="button" id="import-paste">Coller</button>' : ""}</div>
       <p class="immsg" id="import-msg" aria-live="polite"></p>`,
-    actions: [{ label: "Importer", kind: "primary", check: () => !!(S = checkImport(true)), run: () => applyShared(S) }] });   // run comes after the dialog is closed
+    actions: [{ label: "Importer", kind: "primary", disabled: true, check: () => !!(S = checkImport(true)), run: () => applyShared(S) }] });   // enabled only for a valid link   // run comes after the dialog is closed
   const inp = document.getElementById("import-url");
   inp.focus();
   inp.addEventListener("input", () => checkImport(false));
-  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); modal.querySelector("[data-maction]").click(); } });
+  inp.addEventListener("keydown", (e) => { const b = modal.querySelector("[data-maction]"); if (e.key === "Enter") { e.preventDefault(); if (!b.disabled) b.click(); } });
   const paste = document.getElementById("import-paste");
   if (paste) paste.addEventListener("click", () => navigator.clipboard.readText().then((t) => { inp.value = t.trim(); checkImport(true); inp.focus(); },
     () => { showImportMsg("Le presse-papiers n'est pas accessible : collez le lien avec Ctrl+V.", true); inp.focus(); }));
 }
-function showImportMsg(txt, bad) {
+function showImportMsg(txt, bad, ok = false) {   // ok: valid link, "Importer" enabled
   const m = document.getElementById("import-msg"), inp = document.getElementById("import-url");
   if (m) { m.textContent = txt; m.classList.toggle("bad", !!bad); }
   if (inp) { inp.classList.toggle("bad", !!bad); inp.setAttribute("aria-invalid", bad ? "true" : "false"); }
+  const b = modal.querySelector("[data-maction]");
+  if (b) b.disabled = !ok;
 }
 function checkImport(strict) {           // the parsed link, or null; strict: on "Importer" or "Coller", an empty field is an error too
   const inp = document.getElementById("import-url");
@@ -901,7 +905,7 @@ function checkImport(strict) {           // the parsed link, or null; strict: on
   const { S, err } = shareFromText(inp.value);
   if (err) { showImportMsg(err, true); if (strict) inp.focus(); return null; }
   const n = S.goals.length;
-  showImportMsg(`Lien valide : ${n} pièce${n > 1 ? "s" : ""} (${S.goals.map((f) => name(f.c)).join(", ")}).`, false);
+  showImportMsg(`Lien valide : ${n} pièce${n > 1 ? "s" : ""} (${S.goals.map((f) => name(f.c)).join(", ")}).`, false, true);
   return S;
 }
 
@@ -1292,7 +1296,7 @@ function openModal({ title, body, actions, inline, cancel = "Annuler" }) {
   modalBack = document.activeElement;
   modal.innerHTML = `<div class="mback" data-mclose="1"></div><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="mtitle">
     <h3 id="mtitle">${esc(title)}</h3><div class="mbody">${body}</div>
-    <div class="mactions${inline ? " row" : ""}">${inline ? `<button class="btn mbtn" data-mclose="1">${esc(cancel)}</button>` : ""}${actions.map((a, i) => `<button class="btn mbtn ${a.kind || ""}" data-maction="${i}">${esc(a.label)}${a.hint ? `<small>${esc(a.hint)}</small>` : ""}</button>`).join("")}
+    <div class="mactions${inline ? " row" : ""}">${inline ? `<button class="btn mbtn" data-mclose="1">${esc(cancel)}</button>` : ""}${actions.map((a, i) => `<button class="btn mbtn ${a.kind || ""}" data-maction="${i}"${a.disabled ? " disabled" : ""}>${esc(a.label)}${a.hint ? `<small>${esc(a.hint)}</small>` : ""}</button>`).join("")}
     ${inline ? "" : `<button class="btn mbtn" data-mclose="1">${esc(cancel)}</button>`}</div></div>`;
   modal.hidden = false;
   modal._actions = actions;
@@ -1310,7 +1314,7 @@ modal.addEventListener("click", (e) => {
 modal.addEventListener("keydown", (e) => {
   if (e.key === "Escape") { e.stopPropagation(); closeModal(); return; }
   if (e.key === "Tab") {            // keep focus inside the dialog
-    const f = [...modal.querySelectorAll("button, input")];
+    const f = [...modal.querySelectorAll("button:not(:disabled), input")];
     const i = f.indexOf(document.activeElement);
     if (e.shiftKey && i <= 0) { e.preventDefault(); f[f.length - 1].focus(); }
     else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }

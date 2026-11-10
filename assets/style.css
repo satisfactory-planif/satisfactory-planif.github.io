@@ -242,6 +242,7 @@ tr.flash > td { animation: rowFlash 1.6s ease-out; }
 .mactions.row .mbtn { text-align: center; justify-items: center; }
 .mbtn small { font-weight: 400; font-size: 13px; color: var(--muted); }
 .mbtn.primary small { color: inherit; opacity: .85; }
+.btn:disabled, .btn:disabled:hover { opacity: .4; cursor: not-allowed; transform: none; filter: grayscale(.5); box-shadow: none; }
 .btn.danger { background: var(--rust); color: var(--rust-ink); border-color: var(--rust); }
 .btn.danger:hover { color: var(--rust-ink); filter: brightness(1.08); }
 .pickrow { display: flex; align-items: center; gap: 4px; }
