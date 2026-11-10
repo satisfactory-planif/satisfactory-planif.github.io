@@ -101,13 +101,14 @@ td .mach { display: inline-block; min-width: 120px; }
 .tree > details { margin-left: 0; }
 .tree summary { cursor: pointer; padding: 3px 0; display: flex; align-items: flex-start; gap: 6px; list-style: none; }
 .tree summary::-webkit-details-marker { display: none; }
-.tree summary::before { content: "▶"; flex: none; font-size: 10px; line-height: 30px; transition: transform .15s; }   /* marker on the first line, never alone */
+.tree summary::before { content: "▶"; flex: none; width: 10px; text-align: center; font-size: 10px; line-height: 30px; transition: transform .15s; }   /* marker on the first line, never alone */
 .tree details[open] > summary::before { transform: rotate(90deg); }
 .tree .row { display: flex; align-items: center; gap: 4px 6px; flex-wrap: wrap; min-width: 0; }
 .tree .nh, .tree .mk { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }   /* icon stays with its quantity, name or machine */
 .tree .mk { margin-left: 8px; }
 .fromg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; }
-.tree .leaf { margin-left: 16px; padding: 3px 0 3px 10px; border-left: 1px solid var(--line); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.tree .leaf { margin-left: 16px; padding: 3px 0 3px 26px; border-left: 1px solid var(--line); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }   /* 26 = 10 + marker (10) + gap (6): inputs of one recipe line up */
+.tree > .leaf { margin-left: 0; }
 .tree .q { color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 5px 9px 5px 6px; cursor: pointer; font-size: 15px; }
@@ -312,6 +313,10 @@ tr.xrow > td { box-shadow: inset 0 6px 8px -6px rgba(0, 0, 0, .18); }
 .srcl { display: inline-flex; align-items: center; gap: 4px; background: none; border: 1px solid var(--line); border-radius: 5px; padding: 1px 6px 1px 3px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; vertical-align: middle; }
 .srcl .ico.sm { width: 20px; height: 20px; }
 .srcl:hover { border-color: var(--rust); color: var(--rust); }
+.srcl.static { cursor: default; }
+.srcl.static:hover { border-color: var(--line); color: var(--ink); }
+.reu { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 6px; }
+.reu .from { color: var(--muted); font-size: 14px; }
 .tsettings { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px 28px; }
 .tgroup { display: grid; gap: 10px; align-content: start; }
 .tfield { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }

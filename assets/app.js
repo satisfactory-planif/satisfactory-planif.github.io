@@ -352,11 +352,12 @@ function rowDetail(P, k, q) {
       ? `<span class="chip static"><span class="tag tgt">Objectif</span> <span class="num">${fmt(fl[d])}${unit(k)}/min</span></span>`
       : `<button class="chip" data-goto="${d}" data-tipitem="${d}">${icon(d, "sm")}${esc(name(d))} <span class="num">${fmt(fl[d])}${unit(k)}/min</span></button>`).join("") +
     `</div>${P.recovered[k] ? `<p class="note">Consommé au total : ${fmt(P.demand[k])}${unit(k)}/min, dont ${fmt(P.recovered[k])}${unit(k)}/min récupérés en sous-produit de ${recFrom(P, k, P.recovered[k])}</p>` : ""}` +
-    (reu.length ? `<div class="eyebrow" style="margin-top:14px">Surplus réutilisé</div><div class="chips" style="margin-top:6px">` +
+    (reu.length ? `<div class="eyebrow" style="margin-top:14px">Surplus réutilisé</div>` +
       reu.map(([b, v]) => {
         const body = `${icon(b, "sm")}${esc(name(b))} <span class="num">+${fmt(v)}${unit(b)}/min</span>`;
-        return P.mach[b] ? `<button class="chip" data-goto="${b}" data-tipitem="${b}">${body}</button>` : `<span class="chip static" data-tipitem="${b}">${body}</span>`;
-      }).join("") + `</div>` : "") +
+        const chip = P.mach[b] ? `<button class="chip" data-goto="${b}" data-tipitem="${b}">${body}</button>` : `<span class="chip static" data-tipitem="${b}">${body}</span>`;
+        return `<div class="reu">${chip}<span class="fromg"><span class="from">pour</span>${usedFor(P, b, v)}</span></div>`;
+      }).join("") : "") +
     (sur.length ? `<div class="eyebrow" style="margin-top:14px">Surplus à évacuer</div><div class="chips" style="margin-top:6px">` +
       sur.map(([b, v]) => `<span class="chip static" data-tipitem="${b}">${icon(b, "sm")}${esc(name(b))} <span class="num">+${fmt(v)}${unit(b)}/min</span></span>`).join("") + `</div>` : "") +
     `</div></div>`;
@@ -369,6 +370,14 @@ function recFrom(P, k, amount) {      // by-product sources for a recovered amou
   const by = (P.supplyBy || {})[k] || {}, tot = P.supply[k] || 0;
   return Object.keys(by).sort((a, b) => by[b] - by[a]).map((src) =>
     `<button class="srcl" data-goto="${src}" data-tipitem="${src}">${icon(src, "sm")}${esc(name(src))}${Object.keys(by).length > 1 ? ` <span class="num">${fmt(amount * by[src] / tot)}${unit(k)}</span>` : ""}</button>`).join(" ");
+}
+function usedFor(P, b, amount) {     // consumers of a reused by-product, as links to their step (amounts split pro rata)
+  const fl = P.flows[b] || {}, tot = P.demand[b] || 0, us = Object.keys(fl).sort((x, y) => fl[y] - fl[x]);
+  return us.map((d) => {
+    const amt = us.length > 1 ? ` <span class="num">${fmt(amount * fl[d] / tot)}${unit(b)}</span>` : "";
+    return d === "__goal" ? `<span class="srcl static"><span class="tag tgt">Objectif</span>${amt}</span>`
+      : `<button class="srcl" data-goto="${d}" data-tipitem="${d}">${icon(d, "sm")}${esc(name(d))}${amt}</button>`;
+  }).join(" ");
 }
 function netSplit(k, q) {
   const P = lastP;

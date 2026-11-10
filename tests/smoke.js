@@ -177,11 +177,11 @@ function checkImages() {
       const { page, errors } = await open(browser, { "sp-factory": [{ c: "Desc_AluminumIngot_C", rate: 150 }], "sp-tab-f": "steps" }, "#usine");
       await page.waitForSelector("[data-xp]", { timeout: 10000 });
       await page.click('[data-xp="Desc_AluminaSolution_C"]');
-      const reu = await page.$$eval("#row-Desc_AluminaSolution_C + tr.xrow .eyebrow", (els) => {
-        const e = els.find((x) => x.textContent.trim() === "Surplus réutilisé");
-        return e ? [...e.nextElementSibling.querySelectorAll(".chip")].map((c) => c.textContent.replace(/\s+/g, " ").trim()) : null;
-      });
-      check(JSON.stringify(reu) === JSON.stringify(["Silice +62,5/min"]), `Étapes · Solution d'alumine, surplus réutilisé : attendu ["Silice +62,5/min"], obtenu ${JSON.stringify(reu)}`);
+      // the 62,5 silica all go to the aluminium ingots, the only consumer of silica
+      const reu = await page.$$eval("#row-Desc_AluminaSolution_C + tr.xrow .reu", (els) => els.map((e) =>
+        [e.querySelector(".chip"), ...e.querySelectorAll(".fromg > *")].map((x) => x.textContent.replace(/\s+/g, " ").trim()).join(" ")));
+      const want = ["Silice +62,5/min pour Lingot d'aluminium"];
+      check(JSON.stringify(reu) === JSON.stringify(want), `Étapes · Solution d'alumine, surplus réutilisé : attendu ${JSON.stringify(want)}, obtenu ${JSON.stringify(reu)}`);
       const silica = await page.$eval("#row-Desc_Silica_C td.r", (e) => e.textContent.replace(/\s+/g, " ").trim());
       check(silica === "125/min", `Étapes · ligne Silice sans « récupérés » : attendu « 125/min », obtenu « ${silica} »`);
       if (errors.length) check(false, `Étapes (surplus réutilisé) · erreurs JS : ${errors.join(" | ")}`);
@@ -203,6 +203,10 @@ function checkImages() {
         return out;
       }));
       check(!bad.length, `Arbres à 390 px · retours à la ligne : ${bad.length ? bad.join(", ") : "corrects"}`);
+      // inputs of one recipe line up, whether they unfold (Solution d'alumine) or not (Charbon)
+      const xs = await page.$$eval('.tree details[data-k="Desc_AluminumScrap_C"] > :is(details, .leaf)', (els) =>
+        els.map((e) => Math.round((e.querySelector("summary") || e).querySelector(".nh .ico").getBoundingClientRect().left)));
+      check(xs.length === 2 && xs[0] === xs[1], `Arbres · entrées des Rebuts d'aluminium alignées : abscisses des icônes ${xs.join(", ")}`);
       if (errors.length) check(false, `Arbres à 390 px · erreurs JS : ${errors.join(" | ")}`);
       await page.close();
     }
