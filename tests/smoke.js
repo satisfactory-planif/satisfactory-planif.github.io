@@ -182,6 +182,10 @@ function checkImages() {
         [e.querySelector(".chip"), ...e.querySelectorAll(".fromg > *")].map((x) => x.textContent.replace(/\s+/g, " ").trim()).join(" ")));
       const want = ["Silice +62,5/min pour Lingot d'aluminium"];
       check(JSON.stringify(reu) === JSON.stringify(want), `Étapes · Solution d'alumine, surplus réutilisé : attendu ${JSON.stringify(want)}, obtenu ${JSON.stringify(reu)}`);
+      // Destination reads "quantity pour consumer": the 150 m³ of alumina all feed the aluminium scrap
+      const dest = await page.$$eval("#row-Desc_AluminaSolution_C + tr.xrow .xcol:last-child > .eyebrow:first-child + .chips .chip", (els) =>
+        els.map((c) => [...c.childNodes].map((x) => x.textContent.trim()).filter(Boolean).join(" ")));
+      check(JSON.stringify(dest) === JSON.stringify(["150 m³/min pour Rebuts d'aluminium"]), `Étapes · Solution d'alumine, destination : attendu ["150 m³/min pour Rebuts d'aluminium"], obtenu ${JSON.stringify(dest)}`);
       const silica = await page.$eval("#row-Desc_Silica_C td.r", (e) => e.textContent.replace(/\s+/g, " ").trim());
       check(silica === "125/min", `Étapes · ligne Silice sans « récupérés » : attendu « 125/min », obtenu « ${silica} »`);
       if (errors.length) check(false, `Étapes (surplus réutilisé) · erreurs JS : ${errors.join(" | ")}`);

@@ -317,6 +317,7 @@ tr.xrow > td { box-shadow: inset 0 6px 8px -6px rgba(0, 0, 0, .18); }
 .srcl.static:hover { border-color: var(--line); color: var(--ink); }
 .reu { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-top: 6px; }
 .reu .from { color: var(--muted); font-size: 14px; }
+.chip .pour { color: var(--muted); font-size: 14px; }
 .tsettings { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px 28px; }
 .tgroup { display: grid; gap: 10px; align-content: start; }
 .tfield { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }

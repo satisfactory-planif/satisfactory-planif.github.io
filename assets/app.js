@@ -348,9 +348,11 @@ function rowDetail(P, k, q) {
   const sur = surplusOf(P, k), reu = byprodOf(P, k, "recovered");
   let h = `<div class="xbox"><div class="xcol"><div class="eyebrow">Fabrication de ${fmt(q)}${unit(k)}/min</div><div class="tree">${treeKids(k, q, 0, [k], "x")}</div></div>`;
   h += `<div class="xcol"><div class="eyebrow">Destination</div><div class="chips" style="margin-top:6px">` +
-    dest.map((d) => d === "__goal"
-      ? `<span class="chip static"><span class="tag tgt">Objectif</span> <span class="num">${fmt(fl[d])}${unit(k)}/min</span></span>`
-      : `<button class="chip" data-goto="${d}" data-tipitem="${d}">${icon(d, "sm")}${esc(name(d))} <span class="num">${fmt(fl[d])}${unit(k)}/min</span></button>`).join("") +
+    dest.map((d) => {   // quantity first, then what it feeds: "225/min pour Lingot d'aluminium"
+      const q = `<span class="num">${fmt(fl[d])}${unit(k)}/min</span><span class="pour">pour</span>`;
+      return d === "__goal" ? `<span class="chip static">${q}<span class="tag tgt">Objectif</span></span>`
+        : `<button class="chip" data-goto="${d}" data-tipitem="${d}">${q}${icon(d, "sm")}${esc(name(d))}</button>`;
+    }).join("") +
     `</div>${P.recovered[k] ? `<p class="note">Consommé au total : ${fmt(P.demand[k])}${unit(k)}/min, dont ${fmt(P.recovered[k])}${unit(k)}/min récupérés en sous-produit de ${recFrom(P, k, P.recovered[k])}</p>` : ""}` +
     (reu.length ? `<div class="eyebrow" style="margin-top:14px">Surplus réutilisé</div>` +
       reu.map(([b, v]) => {

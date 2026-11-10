@@ -5,7 +5,7 @@
 - Point fixe itératif : la demande de chaque pièce génère des machines, dont les sorties secondaires sont déduites de la demande des autres (`supply`, `supplyBy`), jusqu'à stabilisation (`converged`). Si les recettes choisies forment une boucle qui ne converge pas, la page l'indique.
 - Résultat : `demand`, `supply`, `mach`, `raw`, `recovered`, `surplus`, `nMach`, `mw`, `flows` (consommateur → quantité), `supplyBy`.
 - Machines : « 1 machine à X % » ou « N machines, dont 1 à X % » (pas d'overclocking ni de Somersloop dans le calcul).
-- Étapes : la ligne d'une pièce affiche ce qui est fabriqué (sans la part récupérée) et son surplus. Le détail d'une étape liste sa « Destination », puis ses sous-produits répartis au prorata (`byprodOf`) en « Surplus réutilisé » (part de `recovered`, consommée ailleurs dans la chaîne, suivie de ses consommateurs : `usedFor`, au prorata de `flows`) et « Surplus à évacuer » (part de `surplus`).
+- Étapes : la ligne d'une pièce affiche ce qui est fabriqué (sans la part récupérée) et son surplus. Le détail d'une étape liste sa « Destination » (« 225/min pour Lingot d'aluminium » : quantité d'abord, puis la pièce qu'elle alimente), puis ses sous-produits répartis au prorata (`byprodOf`) en « Surplus réutilisé » (part de `recovered`, consommée ailleurs dans la chaîne, suivie de ses consommateurs : `usedFor`, au prorata de `flows`) et « Surplus à évacuer » (part de `surplus`).
 - Arbres : nets des sous-produits (`netSplit`) : « dont X récupérés, sous-produit de … », le reste à fabriquer ou amener.
 
 ## Transport
