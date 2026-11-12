@@ -29,6 +29,22 @@ const FACTORY_CASES = [
     expect: { "Minerai de fer": 262.5, "É.M.E.": 106.67, "Bauxite": 53.33, "Quartz brut": 26.67, "Charbon": 139.17, "Eau": 63.33 } },
 ];
 
+// Extraction (Mon usine): default extractor = the smallest that covers the need alone on the node (normal by default:
+// Mk.1 60, Mk.2 120, Mk.3 240 /min), MW at 100 % = extractors needed (fraction) × power, like the machines.
+// Sculptrice 2/min: oil 252/120 × 40 = 84 ; water 63,33/120 × 20 = 10,56 ; copper 267/240 × 45 = 50,06 ; iron 262,5/240 × 45
+// = 49,22 ; coal 139,17/240 × 45 = 26,09 ; S.A.M. 106,67/120 × 15 = 13,33 ; limestone 90/120 × 15 = 11,25 ; caterium
+// 62,4/120 × 15 = 7,8 ; bauxite 53,33/60 × 5 = 4,44 ; quartz 26,67/60 × 5 = 2,22 → 258,98 MW, 14 extractors (3+1+2+2+1+1+1+1+1+1).
+// Production: 102 machines, 1 131,84 MW → 116 machines, 1 390,82 MW.
+const EXTRACTION_CASES = [
+  { name: "Sculptrice biochimique 2/min · extraction par défaut", ext: {},
+    stats: ["116 machines au total dont 14 extracteurs", "1 390,82 MW à 100 % dont 258,98 MW d'extraction"],
+    cards: { "Calcaire": "1 Foreuse Mk.2 11,25 MW · gisement normal", "Minerai de fer": "2 Foreuses Mk.3 49,22 MW · gisement normal",
+             "Pétrole brut": "3 Puits de pétrole 84 MW · gisement normal", "Eau": "1 Pompe à eau 10,56 MW" } },
+  // pure node: Mk.1 gives 120/min ≥ 90 → 1 Mk.1, 90/120 × 5 = 3,75 MW
+  { name: "Sculptrice biochimique 2/min · calcaire en gisement pur", ext: { Desc_Stone_C: { p: "Pure" } },
+    cards: { "Calcaire": "1 Foreuse Mk.1 3,75 MW · gisement pur" } },
+];
+
 // Transport: one line carried by train, expected wagon count.
 // Iron ore stacks to 100: 1 wagon = 32 × 100 = 3 200 per trip; round trip 240 s + 2 × 27 s = 4,9 min
 // → 653,06/min per wagon → 1 400/min needs 3 wagons (Mk.6 belts feed 2 400/min per platform, not limiting).
@@ -88,6 +104,55 @@ function checkImages() {
         check(Math.abs(got - v) < 0.01, `${t.name} · ${k} : attendu ${v}, obtenu ${r ? r.value : "absent"}`);
       }
       if (errors.length) check(false, `${t.name} · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+    }
+
+    const extText = (page) => page.$$eval(".raws .raw", (els) => Object.fromEntries(els.map((e) =>
+      [e.querySelector("button.link")?.textContent.trim(), e.querySelector(".ext")?.innerText.replace(/\s+/g, " ").trim()])));
+    for (const t of EXTRACTION_CASES) {
+      const { page, errors } = await open(browser, { "sp-factory": [{ c: "Desc_SpaceElevatorPart_10_C", rate: 2 }], "sp-extract": t.ext, "sp-view": "factory" }, "#usine");
+      await page.waitForSelector(".raws .raw .ext", { timeout: 10000 });
+      if (t.stats) {
+        const st = await page.$$eval(".stat", (els) => els.slice(0, 2).map((e) => e.innerText.replace(/\s+/g, " ").trim()));
+        check(JSON.stringify(st) === JSON.stringify(t.stats), `${t.name} · tuiles : attendu ${JSON.stringify(t.stats)}, obtenu ${JSON.stringify(st)}`);
+      }
+      const ex = await extText(page);
+      for (const [k, v] of Object.entries(t.cards)) check(ex[k] === v, `${t.name} · ${k} : attendu « ${v} », obtenu « ${ex[k]} »`);
+      if (!Object.keys(t.ext).length) {
+        // choosing Mk.1 for limestone (normal node): 90/60 → 2 Mk.1, 1,5 × 5 = 7,5 MW; the choice is saved, then reset
+        await page.click("#xb-Desc_Stone_C");
+        await page.click('#xmenu [data-xm="Build_MinerMk1_C"]');
+        const after = (await extText(page))["Calcaire"];
+        const saved = await page.evaluate(() => localStorage.getItem("sp-extract"));
+        check(after === "2 Foreuses Mk.1 7,5 MW · gisement normal" && saved === '{"Desc_Stone_C":{"m":"Build_MinerMk1_C"}}',
+          `${t.name} · choix Mk.1 pour le Calcaire : obtenu « ${after} », enregistré ${saved}`);
+        await page.click("#xmenu [data-xreset]");
+        const back = (await extText(page))["Calcaire"];
+        check(back === t.cards["Calcaire"] && await page.evaluate(() => localStorage.getItem("sp-extract")) === "{}",
+          `${t.name} · retour au réglage par défaut : obtenu « ${back} »`);
+        await page.keyboard.press("Escape");
+        check(await page.$eval("#xmenu", (e) => e.hidden), `${t.name} · Échap ferme le choix d'extraction`);
+      }
+      if (errors.length) check(false, `${t.name} · erreurs JS : ${errors.join(" | ")}`);
+      await page.close();
+    }
+    {
+      // extraction settings travel in the share link (third part), and "Partager" writes them back
+      const sharedX = "#usine:ModularFrameHeavy*2;;Stone=MinerMk3.Pure";
+      const { page, errors } = await open(browser, {}, sharedX);
+      await page.waitForSelector(".raws .raw .ext", { timeout: 10000 });
+      const lime = (await extText(page))["Calcaire"];   // 180/min on a pure node with a Mk.3: 180/480 × 45 = 16,88 MW
+      check(lime === "1 Foreuse Mk.3 16,88 MW · gisement pur", `Lien partagé avec extraction · Calcaire : obtenu « ${lime} »`);
+      await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+      await page.click("[data-share]");
+      await page.waitForTimeout(300);
+      const code = await page.evaluate(async () => {
+        const i = document.getElementById("share-url");
+        const u = i ? i.value : await navigator.clipboard.readText();
+        return u.slice(u.indexOf("#"));
+      });
+      check(code === sharedX, `Bouton Partager avec extraction · attendu ${sharedX}, obtenu ${code}`);
+      if (errors.length) check(false, `Lien partagé avec extraction · erreurs JS : ${errors.join(" | ")}`);
       await page.close();
     }
 

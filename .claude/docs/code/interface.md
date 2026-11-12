@@ -5,11 +5,11 @@
 - Ombres de profondeur `--sh-1`, `--sh-2`, `--sh-btn`, `--sh-in`.
 - Saisie des débits : virgule (le point est converti), une seule virgule, 2 décimales max, 100 000 max ; un champ vidé reprend une valeur au blur. Temps : minutes + secondes entières, 2 h max.
 - Arbres de fabrication (onglet Arbres, détail d'une étape) : seul le premier niveau sous la pièce est déplié, la suite se charge au dépliage. L'état ouvert ou fermé de chaque nœud est gardé en mémoire (`treeOpen`, clé « portée|chemin » : `data-s` + `data-p`), pas dans `localStorage`, pour survivre aux re-rendus de `updateResults` ; il est perdu au rechargement. Mise en page d'un nœud : le triangle est un `::before` du `summary` (flex), jamais seul sur sa ligne ; les groupes `.nh` (icône, quantité, nom) et `.mk` (icône et nombre de machines) ne se coupent pas entre icône et texte. Une feuille (`.leaf`) réserve la place du triangle (retrait de 26 px) : les entrées d'une même recette sont alignées, dépliables ou non.
-- Composants maison : infobulles interactives (`#tip`), menu de recettes (`#rmenu`), sélecteur de pièce (`#ipick`), toast, modale (`#modal`).
+- Composants maison : infobulles interactives (`#tip`), menu de recettes (`#rmenu`), réglage d'extraction (`#xmenu`, boutons à bascule sous une carte de « Ressources à amener » ; Échap, clic extérieur ou défilement hors écran le ferment), sélecteur de pièce (`#ipick`), toast, modale (`#modal`).
 
 ## État local (`localStorage`)
 
-`sp-choice-f`, `sp-factory`, `sp-sel`, `sp-view`, `sp-tab-i`, `sp-tab-f`, `sp-qmode`, `sp-transport` (+ ancien `sp-choice`, lu en repli). Toute nouvelle clé s'ajoute ici.
+`sp-choice-f`, `sp-factory`, `sp-extract` (réglages d'extraction : ressource → `{m, p}`), `sp-sel`, `sp-view`, `sp-tab-i`, `sp-tab-f`, `sp-qmode`, `sp-transport` (+ ancien `sp-choice`, lu en repli). Toute nouvelle clé s'ajoute ici.
 
 ## Ancres
 
