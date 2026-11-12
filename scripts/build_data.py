@@ -12,6 +12,7 @@ What it does:
 - default ("std") recipe per item and the list of every recipe producing it ("opts")
 - items: en/fr names, fluid, raw resource, stack size, sink points, category, FICSMAS flag
 - categories come from scripts/categories.json; unknown new items go to "Autres" (edit the file to place them)
+- extractors of raw resources (miners, pumps, resource well extractor + pressurizer): name, power, rate per minute
 - icons are NOT extracted from the game: the script only flags whether assets/images/items/<Item>.png exists
 """
 import json, os, re, sys
@@ -97,6 +98,28 @@ for item in sorted(used):
     if ok:
         std[item] = ok[0]
 
+# Extractors of raw resources (Mon usine counts them). Rate = per minute at 100 % on a normal node (fluids in m³).
+# Miners take every solid resource; pumps and well extractors list their resources (mAllowedResources).
+# The well extractor is kept only for what no other extractor gives (nitrogen); it needs a pressurizer.
+def allowed(c):
+    return re.findall(r"\.(\w+?_C)'", c.get('mAllowedResources', '') or '')
+ext_cls = {c['ClassName']: c for g in ('FGBuildableResourceExtractor', 'FGBuildableWaterPump', 'FGBuildableFrackingExtractor', 'FGBuildableFrackingActivator')
+           for c in EN.get(g, [])}
+extractors = {}
+for k in ('Build_MinerMk1_C', 'Build_MinerMk2_C', 'Build_MinerMk3_C', 'Build_OilPump_C', 'Build_WaterPump_C', 'Build_FrackingExtractor_C'):
+    c = ext_cls[k]
+    solid = '(RF_SOLID)' in c.get('mAllowedResourceForms', '')
+    rate = float(c['mItemsPerCycle']) / float(c['mExtractCycleTime']) * 60 / (1 if solid else 1000)
+    e = dict(fr=fr_name.get(k) or c['mDisplayName'], mw=float(c['mPowerConsumption']), rate=round(rate, 4),
+             pur=k != 'Build_WaterPump_C',          # the water pump sits on water, not on a node
+             res='solid' if solid else allowed(c))
+    extractors[k] = e
+others = {r for k, e in extractors.items() if k != 'Build_FrackingExtractor_C' and e['res'] != 'solid' for r in e['res']}
+fx = extractors['Build_FrackingExtractor_C']
+fx['res'] = [r for r in fx['res'] if r not in others]
+press = ext_cls['Build_FrackingSmasher_C']
+fx['press'] = dict(fr=fr_name.get(press['ClassName']) or press['mDisplayName'], mw=float(press['mPowerConsumption']))
+
 catf = json.load(open(os.path.join(root, 'scripts', 'categories.json'), encoding='utf-8'))
 EVENT = re.compile(r'Xmas|CandyCane|Fireworks|Gift|Snow')
 items, new_items = {}, []
@@ -120,10 +143,11 @@ data = dict(
               format={'items': 'classe -> {en, fr, fl (fluide), raw (ressource brute), ico, sink, cat, st (taille de pile ; fluides en litres), ev (FICSMAS)}',
                       'recipes': 'classe -> {en, fr, alt, m (machine), t (s par cycle), mw (MW moyens à 100 %), i/o: [[objet, quantité par cycle]] ; fluides en m³}',
                       'std': 'objet -> recette par défaut', 'opts': 'objet -> toutes les recettes qui le produisent',
-                      'machines': 'classe -> nom français', 'cats': 'ordre des catégories du catalogue'}),
+                      'machines': 'classe -> nom français', 'cats': 'ordre des catégories du catalogue',
+                      'extractors': 'classe -> {fr, mw, rate (/min à 100 % sur gisement normal), pur (pureté applicable), res ("solid" ou [ressources]), press (pressuriseur)}'}),
     version='1.2 – fichiers du jeu (CommunityResources/Docs)',
     items=items, recipes=recipes, std=std, opts=opts,
-    machines={k: v['fr'] for k, v in machines.items()}, cats=catf['order'])
+    machines={k: v['fr'] for k, v in machines.items()}, cats=catf['order'], extractors=extractors)
 json.dump(data, open(out, 'w', encoding='utf-8'), ensure_ascii=False, separators=(',', ':'))
 print(f"items {len(items)} · recipes {len(recipes)} (alt {sum(r['alt'] for r in recipes.values())}) · default recipes {len(std)}")
 if new_items:

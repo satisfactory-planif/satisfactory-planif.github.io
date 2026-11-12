@@ -8,6 +8,16 @@
 - Étapes : la ligne d'une pièce affiche ce qui est fabriqué (sans la part récupérée) et son surplus. Le détail d'une étape liste sa « Destination » (« 225/min pour Lingot d'aluminium » : quantité d'abord, puis la pièce qu'elle alimente), puis ses sous-produits répartis au prorata (`byprodOf`) en « Surplus réutilisé » (part de `recovered`, consommée ailleurs dans la chaîne, suivie de ses consommateurs : `usedFor`, au prorata de `flows`) et « Surplus à évacuer » (part de `surplus`).
 - Arbres : nets des sous-produits (`netSplit`) : « dont X récupérés, sous-produit de … », le reste à fabriquer ou amener.
 
+## Extraction des ressources brutes (`extractionOf`, `extractionTotals`)
+
+- Chaque ressource brute de « Ressources à amener » reçoit un extracteur (`data.json` → `extractors`) : foreuses Mk.1 à Mk.3 pour les solides, Puit de pétrole, Pompe à eau, Extracteur de puits de ressources pour l'azote (seul extracteur possible).
+- Débit d'un extracteur = débit à 100 % sur gisement normal × pureté (impur 0,5, normal 1, pur 2). La Pompe à eau n'a pas de pureté (120 m³/min).
+- Extracteur par défaut : la plus petite foreuse qui couvre seule le besoin sur le gisement choisi (normal par défaut) ; au-delà, plusieurs Mk.3. Exemple : 90/min → 1 Mk.2, 262,5/min → 2 Mk.3. Un choix égal au défaut n'est pas gardé : le défaut suit le besoin.
+- Nombre = besoin ÷ débit, arrondi au supérieur. MW = besoin ÷ débit × puissance (« à 100 % », comme les machines : une fraction d'extracteur compte pour sa fraction).
+- Azote : extracteurs sans consommation, plus 1 Pressuriseur de puits de ressources (150 MW), compté pour un seul puits.
+- Tuiles : « N machines au total, dont X extracteurs » (pressuriseur compris) et « MW à 100 %, dont Y MW d'extraction ».
+- Choix par ressource (extracteur, pureté) : bouton sous la carte de la ressource, fenêtre `#xmenu`, clé `sp-extract`, partagé dans le lien.
+
 ## Fiche pièce (`rawLine`)
 
 - « Ressources brutes au total » d'une recette : seule la machine de la carte utilise cette recette. Ses entrées sont planifiées avec les recettes standard (`plan(entrées, given)`), et ses autres sorties sont déduites de leurs besoins (`given`). La pièce elle-même, si la chaîne la consomme plus bas, vient donc de sa recette standard ou du gisement. Sans cette règle, une recette qui donne la pièce en sous-produit bouclait (eau des Rebuts d'aluminium : la solution d'alumine consomme plus d'eau que la recette n'en rend).
@@ -29,7 +39,8 @@
 
 ## Limites connues
 
-- Pas d'overclocking, de Somersloop ni de calcul de foreuses/extracteurs dans Mon usine.
+- Pas d'overclocking ni de Somersloop dans Mon usine.
+- Extraction : une seule pureté par ressource ; pas de puits de ressources pour l'eau et le pétrole ; un seul puits (un pressuriseur) compté pour l'azote, le nombre de nœuds satellites variant d'un puits à l'autre.
 - Puissance moyenne seulement pour les machines à puissance variable.
 - Capacités wagon et drone reprises du wiki, non relues dans les fichiers du jeu.
 - Pas de comparaison de coût de construction entre tapis, trains et drones.

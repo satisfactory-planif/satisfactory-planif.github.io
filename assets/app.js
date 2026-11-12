@@ -17,6 +17,9 @@ let choice = {};
 function useChoices() { choice = view === "factory" ? choiceF : {}; }
 function saveChoice() { store.set("sp-choice-f", choiceF); }
 let factory = store.get("sp-factory", []);   // [{c, rate}]
+/* Extraction settings of raw resources in "Mon usine": item -> {m: extractor (absent = smallest that fits), p: purity (absent = Normal)} */
+const extF = store.get("sp-extract", {});
+const saveExt = () => store.set("sp-extract", extF);
 let sel = null;
 let view = "item";                           // "item" | "factory"
 const othersOpen = { main: false, byp: false };   // item sheet: "Autres recettes" / "Obtenu en sous-produit" unfolded
@@ -161,6 +164,129 @@ function transportTxt(c, r) {
   if (fit) return `1 ${fl ? "tuyau" : "tapis"} ${fit[1]}`;
   return `${Math.ceil(r / top[0] - EPS)} ${fl ? "tuyaux" : "tapis"} ${top[1]}`;
 }
+/* ---------- extraction of raw resources (Mon usine) ---------- */
+const PURITY = [["Impure", "impur", 0.5], ["Normal", "normal", 1], ["Pure", "pur", 2]];
+const purOf = (p) => PURITY.find((x) => x[0] === p) || PURITY[1];
+const pluralName = (s, n) => (n > 1 ? s.replace(/^(\S*?)(s?)(\s|$)/, (m, w, s2, sp) => w + "s" + sp) : s);
+function extOptions(c) {                 // extractors able to take c, smallest first
+  if (!D.extractors || !D.items[c] || !D.items[c].raw) return [];
+  return Object.keys(D.extractors).filter((k) => { const r = D.extractors[k].res; return r === "solid" ? !D.items[c].fl : r.includes(c); });
+}
+/* Default extractor: the smallest one that covers the need alone on the chosen node; above that, several of the largest. */
+function autoExtractor(opts, rate, mul) {
+  return opts.find((k) => rate <= D.extractors[k].rate * mul + EPS) || opts[opts.length - 1];
+}
+function extractionOf(c, rate) {         // { m, p, auto, per, n, whole, press, mw } or null; mw at 100 %, like the machines
+  const opts = extOptions(c);
+  if (!opts.length || !(rate > EPS)) return null;
+  const ch = extF[c] || {}, pur = D.extractors[opts[0]].pur;
+  const p = pur ? purOf(ch.p)[0] : "", mul = pur ? purOf(p)[2] : 1;
+  const m = ch.m && opts.includes(ch.m) ? ch.m : autoExtractor(opts, rate, mul);
+  const X = D.extractors[m], per = X.rate * mul, n = rate / per;
+  const press = X.press ? 1 : 0;         // one pressurizer per resource well; counted as a single well
+  return { c, m, p, opts, auto: m === autoExtractor(opts, rate, mul), per, n, whole: Math.ceil(n - 1e-6), press, mw: n * X.mw + (press ? X.press.mw : 0) };
+}
+function extractionTotals(P) {
+  const list = Object.keys(P.raw).map((k) => extractionOf(k, P.raw[k])).filter(Boolean);
+  return { list, n: list.reduce((s, x) => s + x.whole + x.press, 0), mw: list.reduce((s, x) => s + x.mw, 0) };
+}
+const extName = (x) => `${x.whole} ${pluralName(D.extractors[x.m].fr, x.whole)}`;
+function extLine(x) {
+  const editable = x.opts.length > 1 || x.p;
+  const lbl = esc(extName(x));
+  const sub = [`<span class="num">${fmt(x.mw)}</span> MW`, x.press && "+ 1 pressuriseur", x.p && `gisement ${purOf(x.p)[1]}`].filter(Boolean)
+    .map((t, i, l) => `<span class="nw">${t}${i < l.length - 1 ? " ·" : ""}</span>`).join(" ");
+  return `<small class="ext">${editable
+    ? `<button type="button" class="ext-btn" id="xb-${x.c}" data-xpick="${x.c}" aria-haspopup="dialog" aria-expanded="false" aria-label="Extraction de ${esc(name(x.c))} : ${lbl}${x.p ? ", gisement " + purOf(x.p)[1] : ""}">${lbl}</button>`
+    : `<span>${lbl}</span>`}<span class="sub">${sub}</span></small>`;
+}
+/* extraction settings: a small dialog under the button */
+const xmenu = document.createElement("div");
+xmenu.id = "xmenu"; xmenu.setAttribute("role", "dialog"); xmenu.hidden = true;
+document.body.appendChild(xmenu);
+let xBtn = null;
+function fillXmenu() {
+  const c = xBtn.dataset.xpick, P = plan(factory.filter((f) => f.rate > 0)), x = extractionOf(c, P.raw[c] || 0);
+  if (!x) { closeXmenu(false); return; }
+  const X = D.extractors[x.m], short = (k) => D.extractors[k].fr.replace(/^Foreuse /, "");
+  const seg = (label, items) => `<div class="lbl">${label}</div><div class="seg" role="group" aria-label="${label}">${items.join("")}</div>`;
+  let h = `<h4 id="xm-title">Extraction · ${esc(name(c))}</h4>`;
+  if (x.opts.length > 1) h += seg("Extracteur", x.opts.map((k, i) => `<button type="button" data-xm="${k}" aria-pressed="${k === x.m}">${esc(i ? short(k) : D.extractors[k].fr)}</button>`));
+  if (x.p) h += seg("Pureté du gisement", PURITY.map(([k, l]) => `<button type="button" data-xpur="${k}" aria-pressed="${k === x.p}">${l[0].toUpperCase() + l.slice(1)}</button>`));
+  h += `<div class="res"><span><span class="num">${fmt(x.per)}${unit(c)}</span> / min par extracteur</span><b>${esc(extName(x))} · ${fmt(x.mw)} MW</b></div>`;
+  const foot = [];
+  if (x.opts.length > 1) foot.push("Par défaut : la plus petite foreuse qui suffit seule sur ce gisement.");
+  if (X.press) foot.push(`Compté pour un seul puits : 1 ${esc(X.press.fr.toLowerCase())} (${fmt(X.press.mw)} MW) par puits, extracteurs sans consommation.`);
+  if (foot.length) h += `<p class="foot">${foot.join(" ")}</p>`;
+  if (extF[c]) h += `<button type="button" class="btn" data-xreset="1">Revenir au réglage par défaut</button>`;
+  xmenu.innerHTML = h;
+  xmenu.setAttribute("aria-labelledby", "xm-title");
+}
+function placeXmenu() {
+  const b = xBtn.getBoundingClientRect();
+  const w = Math.min(320, innerWidth - 16);
+  xmenu.style.width = w + "px";
+  const h = xmenu.offsetHeight, below = innerHeight - b.bottom - 12;
+  xmenu.style.left = Math.max(8, Math.min(b.left, innerWidth - w - 8)) + "px";
+  xmenu.style.top = (below >= h || below >= b.top - 12 ? b.bottom + 6 : b.top - h - 6) + "px";
+}
+function openXmenu(btn) {
+  hideTip(); closeMenu(false);
+  xBtn = btn; btn.setAttribute("aria-expanded", "true");
+  xmenu.hidden = false; fillXmenu();
+  if (xmenu.hidden) return;
+  placeXmenu();
+  const f = xmenu.querySelector('[aria-pressed="true"]') || xmenu.querySelector("button");
+  if (f) f.focus({ preventScroll: true });
+}
+function closeXmenu(focusBtn) {
+  if (xmenu.hidden) return;
+  xmenu.hidden = true;
+  if (xBtn) { xBtn.setAttribute("aria-expanded", "false"); if (focusBtn && xBtn.isConnected) xBtn.focus(); }
+  xBtn = null;
+}
+function setExtraction(c, key, val) {    // val "" = back to the default
+  const ch = { ...(extF[c] || {}) };
+  if (val) ch[key] = val; else delete ch[key];
+  if (ch.p === "Normal") delete ch.p;
+  if (ch.m) {                            // a choice equal to the default is not kept: the default follows the need
+    const P = plan(factory.filter((f) => f.rate > 0)), opts = extOptions(c);
+    const pur = opts.length && D.extractors[opts[0]].pur;
+    if (ch.m === autoExtractor(opts, P.raw[c] || 0, pur ? purOf(ch.p)[2] : 1)) delete ch.m;
+  }
+  if (Object.keys(ch).length) extF[c] = ch; else delete extF[c];
+  saveExt();
+  const focusKey = key === "m" ? `[data-xm="${val}"]` : key === "p" ? `[data-xpur="${val}"]` : "[data-xm], [data-xpur]";
+  updateResults();
+  const nb = document.getElementById("xb-" + c);
+  if (!nb) { closeXmenu(false); return; }
+  xBtn = nb; nb.setAttribute("aria-expanded", "true");
+  fillXmenu(); placeXmenu();
+  const f = xmenu.querySelector(focusKey) || xmenu.querySelector('[aria-pressed="true"]');
+  if (f) f.focus({ preventScroll: true });
+}
+xmenu.addEventListener("click", (e) => {
+  if (!xBtn) return;
+  const c = xBtn.dataset.xpick;
+  const m = e.target.closest("[data-xm]"), p = e.target.closest("[data-xpur]");
+  if (m) setExtraction(c, "m", m.dataset.xm);
+  else if (p) setExtraction(c, "p", p.dataset.xpur);
+  else if (e.target.closest("[data-xreset]")) { delete extF[c]; setExtraction(c, "", ""); }
+});
+xmenu.addEventListener("keydown", (e) => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); closeXmenu(true); } });
+document.addEventListener("pointerdown", (e) => {
+  if (!xmenu.hidden && !xmenu.contains(e.target) && !(e.target.closest && e.target.closest("[data-xpick]") === xBtn)) closeXmenu(false);
+}, true);
+document.addEventListener("focusin", (e) => {
+  if (!xmenu.hidden && !xmenu.contains(e.target) && e.target !== xBtn) closeXmenu(false);
+});
+document.addEventListener("scroll", (e) => {
+  if (xmenu.hidden || xmenu.contains(e.target) || !xBtn) return;
+  const b = xBtn.getBoundingClientRect();
+  if (!xBtn.isConnected || b.bottom < 0 || b.top > innerHeight) closeXmenu(false); else placeXmenu();
+}, true);
+window.addEventListener("resize", () => closeXmenu(false));
+
 function recipeLabel(c, r) {
   if (!r) return { tag: "", name: D.items[c].raw ? "Extraction (ressource brute)" : D.std[c] ? "Fourni de l'extérieur" : "Entrée externe", m: null };
   const R = D.recipes[r];
@@ -277,15 +403,17 @@ function choiceNote() {
 function resultSections(P, targets) {
   const rawK = Object.keys(P.raw).sort((a, b) => P.raw[b] - P.raw[a]);
   const steps = Math.max(0, ...targets.map((t) => (recipeOf(t.c) ? lvlOf(t.c) + 1 : 0)));
+  const E = view === "factory" ? extractionTotals(P) : { list: [], n: 0, mw: 0 };
+  const ext = Object.fromEntries(E.list.map((x) => [x.c, x]));
   let h = `<section><div class="stats">
-      <div class="stat"><b>${P.nMach}</b><span>machines au total</span></div>
-      <div class="stat"><b>${fmt(P.mw)}</b><span>MW à 100 %</span></div>
+      <div class="stat"><b>${P.nMach + E.n}</b><span>machines au total</span>${E.n ? `<em>dont <span class="num">${E.n}</span> extracteur${E.n > 1 ? "s" : ""}</em>` : ""}</div>
+      <div class="stat"><b>${fmt(P.mw + E.mw)}</b><span>MW à 100 %</span>${E.n ? `<em>dont <span class="num">${fmt(E.mw)}</span> MW d'extraction</em>` : ""}</div>
       <div class="stat"><b>${steps}</b><span>étapes de production</span></div>
       <div class="stat"><b>${rawK.length}</b><span>entrées brutes</span></div>
     </div></section>`;
   const lg = rawK.length && view === "factory" ? logistics(rawK.map((k) => ({ c: k, rate: P.raw[k] }))) : null;
   h += `<section><div class="sec-head"><h3 style="margin:0">Ressources à amener</h3>${rawK.length && view === "factory" ? `<button class="btn" data-view="transport" data-tsrc="factory">Transport : tapis, train, drones</button>` : ""}</div>` + (rawK.length ? `<div class="raws">` +
-    rawK.map((k) => `<div class="raw">${icon(k)}<div><button class="link" data-pick="${k}">${esc(name(k))}</button><b>${fmt(P.raw[k])}${unit(k)} / min</b><small>${viaTxt(k, P.raw[k])}${D.items[k].raw ? "" : " · entrée non calculée"}</small></div></div>`).join("") +
+    rawK.map((k) => `<div class="raw">${icon(k)}<div><button class="link" data-pick="${k}">${esc(name(k))}</button><b>${fmt(P.raw[k])}${unit(k)} / min</b><small>${viaTxt(k, P.raw[k])}${D.items[k].raw ? "" : " · entrée non calculée"}</small>${ext[k] ? extLine(ext[k]) : ""}</div></div>`).join("") +
     `</div>` : `<p class="empty">Aucune.</p>`) +
     (lg && (lg.trainW || lg.drones) ? `<p class="note">Logistique choisie : ${lg.summary} · <span class="num">${fmt(lg.mw)}</span> MW pour les gares, quais et héliports (en plus des machines).</p>` : "") +
     (P.converged ? "" : `<p class="note"><span class="tag loop">Boucle</span> Les recettes choisies forment une boucle qui ne se stabilise pas : les quantités sont indicatives.</p>`) + `</section>`;
@@ -615,7 +743,7 @@ function sanitizeDec(el) {             // digits and one comma, at most 2 decima
 }
 
 function render() {
-  hideTip(); closeMenu(false); if (typeof closePicker === "function") closePicker(false);
+  hideTip(); closeMenu(false); closeXmenu(false); if (typeof closePicker === "function") closePicker(false);
   lvlMemo = {}; needMemo = {};
   document.getElementById("sheet").innerHTML = view === "factory" ? renderFactory() : view === "transport" ? renderTransport() : renderItem();
   flash = "";
@@ -660,6 +788,8 @@ document.addEventListener("click", (e) => {
   if (p && !e.target.closest("select")) { select(p.dataset.pick); window.scrollTo({ top: document.getElementById("sheet").offsetTop - 12, behavior: "smooth" }); return; }
   const rp = e.target.closest("[data-rpick]");
   if (rp) { rmBtn === rp && !rmenu.hidden ? closeMenu(true) : openMenu(rp); return; }
+  const xp0 = e.target.closest("[data-xpick]");
+  if (xp0) { xBtn === xp0 && !xmenu.hidden ? closeXmenu(true) : openXmenu(xp0); return; }
   const go = e.target.closest("[data-goto]");
   if (go) {
     const k = go.dataset.goto;
@@ -707,7 +837,7 @@ document.addEventListener("click", (e) => {
       title: "Vider l'usine ?",
       body: `<p>${n > 1 ? `Les ${n} pièces` : "La pièce"} de votre usine${k ? (k > 1 ? ` et ses ${k} recettes modifiées` : " et sa recette modifiée") : ""} ${n > 1 || k ? "seront retirées" : "sera retirée"}. Cette action ne peut pas être annulée.</p>`,
       inline: true,
-      actions: [{ label: "Vider l'usine", kind: "danger", run: () => { factory = []; for (const x in choiceF) delete choiceF[x]; store.set("sp-choice-f", choiceF); saveFactory(); render(); } }],
+      actions: [{ label: "Vider l'usine", kind: "danger", run: () => { factory = []; for (const x in choiceF) delete choiceF[x]; store.set("sp-choice-f", choiceF); for (const x in extF) delete extF[x]; saveExt(); saveFactory(); render(); } }],
     });
     return;
   }
@@ -799,26 +929,31 @@ function pruneFactoryChoices() {
   for (const k in choiceF) delete choiceF[k];
   Object.assign(choiceF, p);
   store.set("sp-choice-f", choiceF);
+  const used = factory.length ? factoryUsed(factory) : new Set();   // extraction settings of resources no longer needed
+  for (const k in extF) if (!used.has(k)) delete extF[k];
+  saveExt();
 }
 function recipeName(k, r) { return recipeLabel(k, r).name + (r && D.recipes[r].alt ? " (alternative)" : r && r === D.std[k] ? " (standard)" : ""); }
 
 /* ---------- sharing a factory by URL ----------
    #usine:ModularFrameHeavy*2,AluminumIngot*60;IronIngot=Alternate_PureIronIngot,Water=
-   goals "item*rate" then, after ";", recipe choices "item=recipe" (empty recipe: no machine, brought in).
-   Class names lose their "Desc_" / "Recipe_" prefix and "_C" suffix when they have them. */
+   goals "item*rate" then, after ";", recipe choices "item=recipe" (empty recipe: no machine, brought in),
+   then, after a second ";", extraction settings "resource=Extractor.Purity" (either part may be absent).
+   Class names lose their "Desc_" / "Recipe_" / "Build_" prefix and "_C" suffix when they have them. */
 const SHARE = "usine:";
 const shortId = (id, pre) => (id.startsWith(pre) && id.endsWith("_C") ? id.slice(pre.length, -2) : id);
 const longId = (s, pre, table) => (hasKey(table, pre + s + "_C") ? pre + s + "_C" : hasKey(table, s) ? s : null);
-function shareCode(goals, choices) {
+function shareCode(goals, choices, ext = {}) {
   const g = goals.map((f) => shortId(f.c, "Desc_") + "*" + +(+f.rate).toFixed(2)).join(",");
   const ch = Object.keys(choices).sort().map((k) => shortId(k, "Desc_") + "=" + (choices[k] ? shortId(choices[k], "Recipe_") : "")).join(",");
-  return SHARE + g + (ch ? ";" + ch : "");
+  const x = Object.keys(ext).sort().map((k) => shortId(k, "Desc_") + "=" + [ext[k].m && shortId(ext[k].m, "Build_"), ext[k].p].filter(Boolean).join(".")).join(",");
+  return SHARE + g + (ch || x ? ";" + ch : "") + (x ? ";" + x : "");
 }
 function parseShare(h) {                 // { goals, choices }, or null when no known part is found
   let s;
   try { s = decodeURIComponent(h.slice(SHARE.length)); } catch (e) { return null; }
-  const [g = "", ch = ""] = s.split(";");
-  const goals = [], choices = {};
+  const [g = "", ch = "", xs = ""] = s.split(";");
+  const goals = [], choices = {}, ext = {};
   for (const part of g.split(",")) {
     const m = part.match(/^(\w+)\*(\d+(?:\.\d+)?)$/);
     const c = m && longId(m[1], "Desc_", D.items);
@@ -833,13 +968,25 @@ function parseShare(h) {                 // { goals, choices }, or null when no 
     const def = D.items[c].raw ? "" : (D.std[c] || "");
     if (r !== null && r !== def && recipeValues(c).includes(r)) choices[c] = r;   // same rule as chooseRecipe
   }
-  return { goals, choices };
+  for (const part of xs.split(",")) {
+    const m = part.match(/^(\w+)=([\w.]+)$/);
+    const c = m && longId(m[1], "Desc_", D.items);
+    if (!c) continue;
+    const opts = extOptions(c), x = {};
+    for (const t of m[2].split(".")) {
+      const k = longId(t, "Build_", D.extractors || {});
+      if (k && opts.includes(k)) x.m = k;
+      else if (PURITY.some((q) => q[0] === t) && t !== "Normal" && opts.length && D.extractors[opts[0]].pur) x.p = t;
+    }
+    if (Object.keys(x).length) ext[c] = x;
+  }
+  return { goals, choices, ext };
 }
 function shareFactory() {
-  const url = location.href.split("#")[0] + "#" + shareCode(factory, choiceF);
+  const url = location.href.split("#")[0] + "#" + shareCode(factory, choiceF, extF);
   const manual = () => {
     openModal({ title: "Partager mon usine", inline: true, cancel: "Fermer", actions: [],
-      body: `<p>Ce lien ouvre votre usine (pièces, débits et recettes choisies) dans un autre navigateur :</p><input class="share-url" id="share-url" readonly value="${esc(url)}" aria-label="Lien de partage">` });
+      body: `<p>Ce lien ouvre votre usine (pièces, débits, recettes et extraction choisies) dans un autre navigateur :</p><input class="share-url" id="share-url" readonly value="${esc(url)}" aria-label="Lien de partage">` });
     const i = document.getElementById("share-url"); if (i) { i.focus(); i.select(); }
   };
   if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(url).then(() => toast("Lien de partage copié dans le presse-papiers."), manual);
@@ -854,13 +1001,15 @@ function applyShared(S) {                // same checks for a link opened in the
     factory = S.goals;
     for (const k in choiceF) delete choiceF[k];
     Object.assign(choiceF, S.choices);
+    for (const k in extF) delete extF[k];
+    Object.assign(extF, S.ext || {});
     pruneFactoryChoices(); saveFactory(); render();
     toast(`Usine partagée ouverte : ${n} pièce${n > 1 ? "s" : ""}.`);
   };
   if (!factory.length) return apply();
-  if (shareCode(factory, choiceF) === shareCode(S.goals, S.choices)) { toast("Votre usine est déjà celle de ce lien."); return; }
+  if (shareCode(factory, choiceF, extF) === shareCode(S.goals, S.choices, S.ext)) { toast("Votre usine est déjà celle de ce lien."); return; }
   openModal({ title: "Ouvrir l'usine partagée ?", inline: true,
-    body: `<p>Le lien contient ${n} pièce${n > 1 ? "s" : ""} : ${S.goals.map((f) => esc(name(f.c))).join(", ")}.</p><p>${factory.length > 1 ? `Les ${factory.length} pièces` : "La pièce"} de votre usine et vos recettes choisies seront remplacées. Cette action ne peut pas être annulée.</p>`,
+    body: `<p>Le lien contient ${n} pièce${n > 1 ? "s" : ""} : ${S.goals.map((f) => esc(name(f.c))).join(", ")}.</p><p>${factory.length > 1 ? `Les ${factory.length} pièces` : "La pièce"} de votre usine, vos recettes et vos réglages d'extraction seront remplacés. Cette action ne peut pas être annulée.</p>`,
     actions: [{ label: "Remplacer mon usine", kind: "danger", run: apply }] });
 }
 
