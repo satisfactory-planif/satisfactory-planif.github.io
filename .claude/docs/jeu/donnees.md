@@ -17,7 +17,7 @@ Source : `<installation Satisfactory>/CommunityResources/Docs/en-US.json` et `fr
 
 - Seules les recettes fabriquées dans une machine de production sont gardées (pas l'atelier, pas les bâtiments).
 - **Alternative** : id contenant `_Alternate_`, ou recette débloquée uniquement par des schémas `EST_Alternate` (disques durs).
-- **Recette par défaut** : classement (alternative +100, produit secondaire +50, « Unpackage » +40, convertisseur produisant une ressource brute +30, nom différent de l'objet +1). Exception codée : Lingot de ficsite → `Recipe_FicsiteIngot_Iron_C` (les trois recettes sont standard en 1.2).
+- **Recette par défaut** : classement (alternative +100, produit secondaire +50, « Unpackage » +40, convertisseur produisant une ressource brute +30, nom différent de l'objet +1). Exception codée : Lingot de ficsite → `Recipe_FicsiteIngot_AL_C` (les trois recettes sont standard en 1.2 ; l'aluminium demande le moins d'É.M.E. par lingot, 8 contre 12 au caterium et 16 au fer, et c'est le choix de satisfactory-calculator.com).
 - **Puissance** des machines à puissance variable (accélérateur, convertisseur, encodeur) : `constante + facteur / 2` (moyenne).
 - Noms français : ceux du jeu (`fr.json`).
 - Catégories : `scripts/categories.json`. Un nouvel objet absent du fichier tombe dans « Autres » (ou FICSMAS si son nom correspond à `Xmas|CandyCane|Fireworks|Gift|Snow`) et le script le signale.

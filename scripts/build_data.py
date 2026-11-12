@@ -78,9 +78,10 @@ def rank(rid, item):
     if r['en'] != items_raw[item]['mDisplayName']: s += 1
     return s
 
-# Defaults the ranking cannot settle: the three Ficsite Ingot recipes are all standard in the game;
-# the iron one is unlocked by milestone 9-1 itself.
-STD_PICK = {'Desc_FicsiteIngot_C': 'Recipe_FicsiteIngot_Iron_C'}
+# Defaults the ranking cannot settle: the three Ficsite Ingot recipes are all standard in the game.
+# Aluminium needs the least S.A.M. per ingot (8 ore vs 12 caterium, 16 iron) and is what
+# satisfactory-calculator.com picks, so plans match theirs.
+STD_PICK = {'Desc_FicsiteIngot_C': 'Recipe_FicsiteIngot_AL_C'}
 
 std, opts = {}, {}
 for item in sorted(used):
