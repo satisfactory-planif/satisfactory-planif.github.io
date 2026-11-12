@@ -13,6 +13,7 @@ npm test
 | Cadre modulaire lourd 2/min, recettes standard | 480 minerai de fer, 180 charbon, 180 calcaire /min |
 | Idem avec Lingot de fer pur (7 minerai + 4 eau → 13 lingots) | 300 lingots → 161,54 + 180 (acier) = 341,54 minerai, 92,31 m³ d'eau |
 | Lingot d'aluminium 60/min | 60 m³ d'eau nette (après recyclage) |
+| Sculptrice biochimique 2/min, recettes standard (Lingot de ficsite à l'aluminium) | 40 trigons → 13,33 lingots de ficsite → 26,67 É.M.E. réanimée (× 4 = 106,67 É.M.E.) et 53,33 lingots d'aluminium (53,33 bauxite, 26,67 quartz brut) ; 262,5 minerai de fer, 139,17 charbon, 63,33 m³ d'eau. Mêmes totaux que satisfactory-calculator.com |
 | Train, 1 400 minerai/min, aller-retour 4 min + arrêts | wagon 3 200 ÷ 4,9 min = 653,06/min → 3 wagons |
 | Idem avec tapis Mk.3 vers les quais | 2 × 270 = 540/min par quai → 3 quais ; 1 400 ÷ 3 = 466,67/min par quai → 2 tapis Mk.3 ; seul le repère « conteneur industriel » s'affiche |
 | Importer (modale) | bouton désactivé pour un champ vide, `…/#usine` (« aucune pièce »), un lien sans `#usine`, des pièces inconnues ; actif pour un lien valide ; lien valide entouré d'espaces : « Lien valide : 1 pièce (Cadre modulaire lourd) » ; puis confirmation et remplacement de l'usine, 341,54 minerai de fer |

@@ -22,6 +22,11 @@ const FACTORY_CASES = [
     expect: { "Minerai de fer": 341.54, "Eau": 92.31, "Charbon": 180 } },
   { name: "Lingot d'aluminium 60/min : eau nette après recyclage", factory: [{ c: "Desc_AluminumIngot_C", rate: 60 }],
     expect: { "Eau": 60 } },
+  // Default Ficsite Ingot = aluminium recipe (2 reanimated S.A.M. + 4 aluminium ingots → 1). 2 sculptors/min need 40 Ficsite
+  // Trigons → 13,33 ingots → 26,67 reanimated S.A.M. (× 4 = 106,67 S.A.M.) and 53,33 aluminium ingots → 53,33 bauxite,
+  // 26,67 raw quartz. Same raw totals as satisfactory-calculator.com for this target.
+  { name: "Sculptrice biochimique 2/min : lingot de ficsite à l'aluminium par défaut", factory: [{ c: "Desc_SpaceElevatorPart_10_C", rate: 2 }],
+    expect: { "Minerai de fer": 262.5, "É.M.E.": 106.67, "Bauxite": 53.33, "Quartz brut": 26.67, "Charbon": 139.17, "Eau": 63.33 } },
 ];
 
 // Transport: one line carried by train, expected wagon count.
