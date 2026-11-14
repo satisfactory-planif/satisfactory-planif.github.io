@@ -1,6 +1,6 @@
 # Planificateur Satisfactory
 
-**https://satisfactory-planif.github.io/**
+**https://faimer-org.github.io/satisfactory-planif/**
 
 Planificateur de production pour Satisfactory 1.2, en français, à partir des données officielles du jeu.
 

@@ -217,10 +217,10 @@ function checkImages() {
         return `${b.disabled ? "désactivé" : "actif"} · ${m.classList.contains("bad") ? "erreur : " : ""}${m.textContent}`;
       });
       const steps = [["", /^désactivé · $/],
-        ["https://satisfactory-planif.github.io/#usine", /^désactivé · erreur : Ce lien ne contient aucune pièce : c'est l'adresse de Mon usine/],
+        ["https://faimer-org.github.io/satisfactory-planif/#usine", /^désactivé · erreur : Ce lien ne contient aucune pièce : c'est l'adresse de Mon usine/],
         ["https://exemple.fr/#accueil", /^désactivé · erreur : Ce lien ne correspond pas à une usine partagée/],
         ["#usine:Inconnu*3", /^désactivé · erreur : Aucune pièce de ce lien n'est reconnue/],
-        ["  https://satisfactory-planif.github.io/#usine:ModularFrameHeavy*2;IronIngot=Alternate_PureIronIngot  ", /^actif · Lien valide : 1 pièce \(Cadre modulaire lourd\)\.$/]];
+        ["  https://faimer-org.github.io/satisfactory-planif/#usine:ModularFrameHeavy*2;IronIngot=Alternate_PureIronIngot  ", /^actif · Lien valide : 1 pièce \(Cadre modulaire lourd\)\.$/]];
       for (const [v, want] of steps) {
         if (v) await page.fill("#import-url", v);
         const got = await state();
